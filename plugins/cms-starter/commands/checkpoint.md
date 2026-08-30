@@ -11,11 +11,19 @@ reads `04`. Use that padded form everywhere below, including when you name
 the week back to the student, so what they read matches the tag you use.
 
 This recovers the files the scaffold is supposed to have at that point. It
-does not contain finished answers, but it does overwrite the scaffold files
-(`CLAUDE.md` and `README.md`) with the versions from that week's tag,
-including any of the student's own committed edits to them. After it runs,
-the restored files are staged but not yet committed, so nothing is
-permanent until the student reviews the change and commits it themselves.
+does not contain finished answers.
+
+It replaces **every scaffold file** with that week's version, including any
+committed edits of the student's own: `CLAUDE.md`, `README.md`, everything
+under `docs/`, `.claude/settings.json`, and `.gitignore`. Not just two files.
+
+It deliberately does **not** touch `notes/`. The ledgers there are the
+student's own record, and reverting them would cost work the whole course is
+built on. The one exception is a ledger that is missing entirely, which is
+restored because an absent ledger helps nobody.
+
+After it runs, the restored files are staged but not yet committed, so
+nothing is permanent until the student reviews the change and commits it.
 
 Run these, showing the output of each:
 
@@ -31,10 +39,24 @@ Run these, showing the output of each:
    that week's checkpoint has not been published yet, list the tags that do
    exist so they know what is available, and suggest they ask the
    instructor rather than trying again.
-5. `git checkout wk<padded week> -- .` to restore that week's files.
-   Restore from the tag, never from `upstream/main`, because main tracks
-   week 1 only.
-6. `git status --short` to show exactly what changed. Point out that these
+5. Restore that week's files, holding `notes/` back:
+
+       git checkout wk<padded week> -- . ':(exclude)notes/'
+
+   Quote the pathspec exactly as written, or the shell will eat the
+   parentheses. Restore from the tag, never from `upstream/main`, because
+   main tracks week 1 only.
+
+6. Restore a ledger only if it is missing. For each path the tag carries
+   under `notes/`, check whether the student actually has it:
+
+       git ls-tree -r --name-only wk<padded week> -- notes/
+
+   For any of those paths that does not exist in the working tree, and only
+   those, run `git checkout wk<padded week> -- <that path>` and tell the
+   student you put a missing ledger back. If every path is present, restore
+   none of them and say so: their ledger entries were never at risk.
+7. `git status --short` to show exactly what changed. Point out that these
    files are staged, not committed, so the student still needs to commit
    them before the restore is permanent (or undo it entirely with
    `git checkout HEAD -- .`, which puts both the staged and working copies
