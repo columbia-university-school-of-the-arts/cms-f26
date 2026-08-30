@@ -1,0 +1,12 @@
+{
+  "name": "cms-f26",
+  "owner": { "name": "Behrang Garakani" },
+  "description": "Course tooling for Coding for Media Studies (CMS 2026), Columbia University School of the Arts.",
+  "plugins": [
+    {
+      "name": "cms-starter",
+      "source": "./plugins/cms-starter",
+      "description": "Fleet repo tooling: the provenance ledger skill and the weekly checkpoint command."
+    }
+  ]
+}

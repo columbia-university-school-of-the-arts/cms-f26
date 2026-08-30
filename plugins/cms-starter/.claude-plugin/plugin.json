@@ -1,0 +1,8 @@
+{
+  "name": "cms-starter",
+  "version": "0.1.0",
+  "description": "Tooling for a CMS 2026 fleet repo: append provenance entries to the two ledgers, and restore a week's scaffold floor from upstream.",
+  "author": { "name": "Behrang Garakani" },
+  "license": "CC-BY-NC-SA-4.0",
+  "skills": ["./skills/ledger"]
+}
