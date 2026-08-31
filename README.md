@@ -8,8 +8,9 @@ which is documented from the inside.
 
 ## Start here
 
-- [Weeks 0 and 1](docs/weeks-0-and-1.md) — what to do before we meet, and
-  what happens when we do.
+Setup instructions live on the course Canvas site, not here. That page is what
+to do before the first session; this repository is the tooling you install
+once you are in the room.
 
 ## The course plugin
 
