@@ -17,10 +17,10 @@ It replaces **every scaffold file** with that week's version, including any
 committed edits of the student's own: `CLAUDE.md`, `README.md`, everything
 under `docs/`, `.claude/settings.json`, and `.gitignore`. Not just two files.
 
-It deliberately does **not** touch `notes/`. The ledgers there are the
-student's own record, and reverting them would cost work the whole course is
-built on. The one exception is a ledger that is missing entirely, which is
-restored because an absent ledger helps nobody.
+It deliberately does **not** touch `notes/` or `cowork/`. The ledgers in one
+and the manual passes in the other are the student's own work, and a
+checkpoint that reverted them would destroy the record the final project is
+built from.
 
 After it runs, the restored files are staged but not yet committed, so
 nothing is permanent until the student reviews the change and commits it.
@@ -41,16 +41,16 @@ Run these, showing the output of each:
    instructor rather than trying again.
 5. Restore that week's files, holding `notes/` back:
 
-       git checkout wk<padded week> -- . ':(exclude)notes/'
+       git checkout wk<padded week> -- . ':(exclude)notes/' ':(exclude)cowork/'
 
    Quote the pathspec exactly as written, or the shell will eat the
    parentheses. Restore from the tag, never from `upstream/main`, because
    main tracks week 1 only.
 
 6. Restore a ledger only if it is missing. For each path the tag carries
-   under `notes/`, check whether the student actually has it:
+   under `notes/` or `cowork/`, check whether the student actually has it:
 
-       git ls-tree -r --name-only wk<padded week> -- notes/
+       git ls-tree -r --name-only wk<padded week> -- notes/ cowork/
 
    For any of those paths that does not exist in the working tree, and only
    those, run `git checkout wk<padded week> -- <that path>` and tell the
