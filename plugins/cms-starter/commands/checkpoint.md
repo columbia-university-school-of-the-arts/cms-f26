@@ -39,23 +39,23 @@ Run these, showing the output of each:
    that week's checkpoint has not been published yet, list the tags that do
    exist so they know what is available, and suggest they ask the
    instructor rather than trying again.
-5. Restore that week's files, holding `notes/` back:
+5. Restore that week's files, holding `notes/` and `cowork/` back:
 
        git checkout wk<padded week> -- . ':(exclude)notes/' ':(exclude)cowork/'
 
-   Quote the pathspec exactly as written, or the shell will eat the
+   Quote both pathspecs exactly as written, or the shell will eat the
    parentheses. Restore from the tag, never from `upstream/main`, because
    main tracks week 1 only.
 
-6. Restore a ledger only if it is missing. For each path the tag carries
+6. Restore a file only if it is missing. For each path the tag carries
    under `notes/` or `cowork/`, check whether the student actually has it:
 
        git ls-tree -r --name-only wk<padded week> -- notes/ cowork/
 
    For any of those paths that does not exist in the working tree, and only
    those, run `git checkout wk<padded week> -- <that path>` and tell the
-   student you put a missing ledger back. If every path is present, restore
-   none of them and say so: their ledger entries were never at risk.
+   student you put the missing file back. If every path is present, restore
+   none of them and say so: their own work was never at risk.
 7. `git status --short` to show exactly what changed. Point out that these
    files are staged, not committed, so the student still needs to commit
    them before the restore is permanent (or undo it entirely with
