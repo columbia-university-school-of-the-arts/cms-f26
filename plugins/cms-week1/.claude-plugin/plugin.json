@@ -1,8 +1,12 @@
 {
   "name": "cms-week1",
   "version": "0.1.0",
-  "description": "Week 1: attribute subtitle lines to a speaker by an explicit, arguable rule.",
-  "author": { "name": "Behrang Garakani" },
+  "description": "Week 1: map a folder of course readings into a table whose claims are sourced and whose gaps are declared.",
+  "author": {
+    "name": "Behrang Garakani"
+  },
   "license": "CC-BY-NC-SA-4.0",
-  "skills": ["./skills/attribute-speakers"]
+  "skills": [
+    "./skills/corpus-map"
+  ]
 }
