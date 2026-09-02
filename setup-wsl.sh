@@ -90,6 +90,35 @@ run_sh() {
 FAILED=0
 fail() { warn "$1"; FAILED=1; }
 
+# The file a LOGIN shell actually reads. On Ubuntu, bash reads .bash_profile,
+# then .bash_login, then .profile — the FIRST one that exists, and stops. Ubuntu
+# ships .profile only, and that file is what adds ~/.local/bin to PATH and
+# sources .bashrc. Creating a .bash_profile would shadow it and quietly break
+# both. So: use .bash_profile only if the student already has one.
+if [ -f "$HOME/.bash_profile" ]; then
+  SHELL_PROFILE="$HOME/.bash_profile"
+else
+  SHELL_PROFILE="$HOME/.profile"
+fi
+
+# env -i is load-bearing. A login shell INHERITS PATH from its caller and adds
+# to it; it does not rebuild it. So "$SHELL -lc ..." from inside this script
+# would find tools purely because this script already put them on PATH, and
+# would report success for a student whose next terminal cannot find anything.
+LOGIN_SHELL="${SHELL:-/bin/bash}"
+login_finds() {
+  env -i HOME="$HOME" USER="${USER:-$(id -un)}" TERM="${TERM:-dumb}" \
+    "$LOGIN_SHELL" -lc "command -v $1 >/dev/null 2>&1" >/dev/null 2>&1
+}
+
+ensure_on_path() {
+  local dir="$1"
+  if [ -f "$SHELL_PROFILE" ] && grep -qF "$dir" "$SHELL_PROFILE" 2>/dev/null; then
+    return 0
+  fi
+  printf '\n# Added by the CMS 2026 setup script\nexport PATH="%s:$PATH"\n' "$dir" >> "$SHELL_PROFILE"
+}
+
 # ------------------------------------------------------------ preflight ----
 
 printf '%sCMS 2026 setup (WSL)%s  %s(version %s)%s\n' "$B" "$OFF" "$DIM" "$SETUP_VERSION" "$OFF"
@@ -206,11 +235,20 @@ if [ "$DRY_RUN" = 1 ]; then
   exit 0
 fi
 
+# Ask a fresh login shell, not this one — see login_finds above.
 for tool in git gh ffmpeg claude; do
-  if command -v "$tool" >/dev/null 2>&1; then
+  if login_finds "$tool"; then
     have "$tool"
+  elif command -v "$tool" >/dev/null 2>&1; then
+    todo "$tool works here but a new terminal would not find it — fixing"
+    ensure_on_path "$(dirname "$(command -v "$tool")")"
+    if login_finds "$tool"; then
+      have "$tool (added to $(basename "$SHELL_PROFILE"))"
+    else
+      fail "$tool is installed but not on a new terminal's PATH, and the fix did not take"
+    fi
   else
-    fail "$tool is still not on your PATH"
+    fail "$tool is not installed"
   fi
 done
 

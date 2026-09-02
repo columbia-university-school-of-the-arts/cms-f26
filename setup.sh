@@ -76,6 +76,14 @@ run_remote() {
 FAILED=0
 fail() { warn "$1"; FAILED=1; }
 
+# The file a LOGIN shell of this type actually reads. Getting this wrong means
+# the PATH repair below writes to a file nobody sources.
+case "$(basename "${SHELL:-/bin/zsh}")" in
+  zsh)  SHELL_PROFILE="$HOME/.zprofile" ;;
+  bash) SHELL_PROFILE="$HOME/.bash_profile" ;;
+  *)    SHELL_PROFILE="$HOME/.profile" ;;
+esac
+
 # ------------------------------------------------------------ preflight ----
 
 if [ "$(uname -s)" != "Darwin" ]; then
@@ -138,8 +146,6 @@ if [ -n "$BREW_BIN" ] && [ "$DRY_RUN" = 0 ]; then
 fi
 
 if [ -n "$BREW_BIN" ]; then
-  SHELL_PROFILE="$HOME/.zprofile"
-  [ "$(basename "${SHELL:-/bin/zsh}")" = "bash" ] && SHELL_PROFILE="$HOME/.bash_profile"
   SHELLENV_LINE="eval \"\$($BREW_BIN shellenv)\""
   if [ -f "$SHELL_PROFILE" ] && grep -qF "$BREW_BIN shellenv" "$SHELL_PROFILE" 2>/dev/null; then
     have "already on your PATH in $(basename "$SHELL_PROFILE")"
@@ -212,11 +218,46 @@ if [ "$DRY_RUN" = 1 ]; then
   exit 0
 fi
 
+# Check a FRESH LOGIN SHELL, not this one. This script has already adjusted its
+# own PATH, so asking itself proves nothing about tomorrow morning. What matters
+# is whether a terminal the student opens later can find these.
+# env -i is load-bearing. A login shell INHERITS PATH from its caller and adds
+# to it; it does not rebuild it. So "$SHELL -lc ..." from inside this script
+# would find tools purely because this script already put them on PATH, and
+# would report success for a student whose next terminal cannot find anything.
+# Clearing the environment first is what makes this a real question.
+LOGIN_SHELL="${SHELL:-/bin/zsh}"
+login_finds() {
+  env -i HOME="$HOME" USER="${USER:-$(id -un)}" TERM="${TERM:-dumb}" \
+    "$LOGIN_SHELL" -lc "command -v $1 >/dev/null 2>&1" >/dev/null 2>&1
+}
+
+ensure_on_path() {
+  # Persist a directory into the login profile, once.
+  local dir="$1" line="export PATH=\"$1:\$PATH\""
+  if [ -f "$SHELL_PROFILE" ] && grep -qF "$dir" "$SHELL_PROFILE" 2>/dev/null; then
+    return 0
+  fi
+  printf '\n# Added by the CMS 2026 setup script\n%s\n' "$line" >> "$SHELL_PROFILE"
+}
+
 for tool in brew git gh claude; do
-  if command -v "$tool" >/dev/null 2>&1; then
+  if login_finds "$tool"; then
     have "$tool"
+  elif command -v "$tool" >/dev/null 2>&1; then
+    todo "$tool works here but a new terminal would not find it — fixing"
+    case "$tool" in
+      claude) ensure_on_path "$HOME/.local/bin" ;;
+      brew)   ensure_on_path "$(dirname "$BREW_BIN")" ;;
+      *)      ensure_on_path "$(dirname "$(command -v "$tool")")" ;;
+    esac
+    if login_finds "$tool"; then
+      have "$tool (added to $(basename "$SHELL_PROFILE"))"
+    else
+      fail "$tool is installed but not on a new terminal's PATH, and the fix did not take"
+    fi
   else
-    fail "$tool is still not on your PATH"
+    fail "$tool is not installed"
   fi
 done
 
