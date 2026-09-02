@@ -23,7 +23,7 @@ set -uo pipefail
 
 # Bumped by hand. Printed on every run so that a stale copy is visible in the
 # room rather than inferred from odd behaviour.
-SETUP_VERSION="2026.09.01"
+SETUP_VERSION="2026.09.02"
 
 DRY_RUN=0
 CHECK_ONLY=0
@@ -79,8 +79,14 @@ fail() { warn "$1"; FAILED=1; }
 # ------------------------------------------------------------ preflight ----
 
 if [ "$(uname -s)" != "Darwin" ]; then
-  echo "This script supports macOS only for now." >&2
-  echo "On Windows, see the README — the toolchain is installed by hand in Week 2." >&2
+  echo "This is the macOS script." >&2
+  echo >&2
+  if grep -qiE "microsoft|wsl" /proc/version 2>/dev/null; then
+    echo "You are in WSL — run ./setup-wsl.sh instead." >&2
+  else
+    echo "On Windows, install WSL first (see WINDOWS.md), then run setup-wsl.sh" >&2
+    echo "inside it." >&2
+  fi
   exit 1
 fi
 
@@ -179,6 +185,24 @@ else
   export PATH="$HOME/.local/bin:$PATH"
 fi
 
+# ------------------------------------------------ connect gh to git ----
+
+step "Connecting GitHub to git"
+note "So that git push works without asking you for a password every time."
+
+if [ "$DRY_RUN" = 1 ]; then
+  printf '       %s$ gh auth setup-git%s\n' "$DIM" "$OFF"
+  note "(only runs once you have signed in with gh auth login)"
+elif ! command -v gh >/dev/null 2>&1; then
+  todo "skipped — gh is not installed"
+elif gh auth status >/dev/null 2>&1; then
+  todo "you are signed in; wiring git up to use it"
+  run gh auth setup-git && have "git will now use your GitHub sign-in" \
+    || fail "gh auth setup-git failed"
+else
+  todo "not signed in yet — do this after gh auth login (see below)"
+fi
+
 # ------------------------------------------------------------- verify ----
 
 step "Checking it all worked"
@@ -210,9 +234,13 @@ echo "Two things left, and neither is automatic:"
 echo
 echo "  1. Close this terminal and open a new one, so it picks up the changes."
 echo
-echo "  2. Sign in to GitHub:    gh auth login"
+echo "  2. Sign in to GitHub, then let git use that sign-in:"
+echo
+echo "         gh auth login"
+echo "         gh auth setup-git"
+echo
 echo "     Choose HTTPS, and authenticate in the browser when it offers."
-echo "     This is also what lets you push your work later."
+echo "     The second command is what lets you push without a password later."
 echo
 echo "Then check everything is there:"
 echo
