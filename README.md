@@ -14,65 +14,61 @@ once you are in the room.
 
 ## Installing the toolchain
 
-One line, in Terminal. It fetches this repository and runs the installer:
+Download **`setup.sh`** from **Files** on the course Canvas site, then open
+Terminal (⌘-Space, type `Terminal`, press return) and paste this one line:
 
-    git clone https://github.com/columbia-university-school-of-the-arts/cms-f26.git && bash cms-f26/setup.sh
+    bash ~/Downloads/setup.sh
 
-`setup.sh` installs Homebrew, git, the GitHub CLI, and Claude Code, in that
-order. It is safe to run more than once: anything already present is reported
-and left alone.
+That is the whole thing. No unzipping, no `chmod`, no double-clicking.
+
+It installs Homebrew, git, the GitHub CLI, and Claude Code, in that order, and
+it is safe to run more than once — anything already present is reported and
+left alone.
 
 **macOS only for now.** Windows is being worked out; see below.
 
-### Signing in during the clone
+### Read it before you run it
 
-This repository is private, so `git clone` asks who you are. **Two things
-about that prompt surprise almost everyone.**
+    bash ~/Downloads/setup.sh --dry-run    # print every command, run none of them
+    bash ~/Downloads/setup.sh --check      # report what you have, change nothing
 
-**Your GitHub password will not work.** GitHub stopped accepting passwords on
-the command line in 2021. Where it says `Password:`, you paste a *personal
-access token* instead:
-
-1. Go to <https://github.com/settings/tokens> → **Generate new token
-   (classic)**
-2. Give it a name, and tick the **`repo`** checkbox
-3. Generate it, and copy it — GitHub shows it once and never again
-
-**The password prompt shows nothing while you paste.** No dots, no stars, no
-movement. That is deliberate, it is not a broken keyboard, and it is the
-single most common place people give up. Paste, press return, carry on.
-
-Once you have signed in once, your Mac remembers it. You will not be asked
-again.
-
-### Other ways to run it
-
-If you already have the repository:
-
-    ./setup.sh --dry-run    # show every command, run none of them
-    ./setup.sh --check      # report what you already have, change nothing
-    ./setup.sh              # do it
-
-**Run `--dry-run` first and read what it intends to do.** Not as a formality.
-This course is partly about what you agree to when you hand a tool control,
-and an install script is the first thing anyone will ask you to pipe into a
-shell unread. `--dry-run` makes no network calls and changes nothing, so
-there is no cost to looking.
+Not a formality. This course is partly about what you agree to when you hand a
+tool control, and an install script is the first thing anyone will ask you to
+run unread. `--dry-run` makes no network calls and changes nothing, so looking
+first costs you nothing.
 
 The script asks for your password once, when Homebrew installs. That is
 Homebrew creating directories it does not yet own.
 
+### If something looks wrong
+
+- **The browser shows the script as text instead of downloading it.** Use the
+  **Download** button in Canvas Files rather than clicking the filename.
+- **`bash: ~/Downloads/setup.sh: No such file or directory`.** Your browser
+  saved it somewhere else, or renamed it (`setup-1.sh` if you downloaded twice).
+  Type `bash ` — with the trailing space — then drag the file from Finder into
+  the Terminal window, which pastes its exact path.
+- **Do not double-click it.** macOS blocks scripts downloaded from a browser
+  when they are launched from Finder, and it does so silently enough to be
+  confusing. Running it from Terminal is unaffected.
+
 Two things it deliberately does not do: it does not sign you in to GitHub
 (`gh auth login` opens a browser and is yours to complete), and it does not
-install the Claude desktop app (that comes from the Announcement, before
-class).
+install the Claude desktop app — that comes from the Announcement, before class.
 
 ### Windows
 
-Not yet supported. The blocker is not the script: `git` and the GitHub CLI
-both require administrator rights on Windows, which a script cannot grant. A
-WSL path is the likely answer and is not settled. Until it is, Windows
-students install by hand in Week 2, with an instructor present.
+Not yet supported. The blocker is not the script: `git` and the GitHub CLI both
+require administrator rights on Windows, which no script can grant. A WSL path
+is the likely answer and is not settled. Until it is, Windows students install
+by hand in Week 2, with an instructor present.
+
+### For instructors
+
+This file is the source of truth; the copy on Canvas is what students run. They
+drift silently. `setup.sh` prints its version on every run — bump
+`SETUP_VERSION` and re-upload to Canvas after any change, and ask a stuck
+student what version theirs reports.
 
 ## The course plugin
 
