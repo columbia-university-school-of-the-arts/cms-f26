@@ -21,6 +21,10 @@
 
 set -uo pipefail
 
+# Bumped by hand. Printed on every run so that a stale copy is visible in the
+# room rather than inferred from odd behaviour.
+SETUP_VERSION="2026.09.01"
+
 DRY_RUN=0
 CHECK_ONLY=0
 for arg in "$@"; do
@@ -79,6 +83,8 @@ if [ "$(uname -s)" != "Darwin" ]; then
   echo "On Windows, see the README — the toolchain is installed by hand in Week 2." >&2
   exit 1
 fi
+
+printf '%sCMS 2026 setup%s  %s(version %s)%s\n' "$B" "$OFF" "$DIM" "$SETUP_VERSION" "$OFF"
 
 step "Checking what you already have"
 

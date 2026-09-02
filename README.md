@@ -14,11 +14,40 @@ once you are in the room.
 
 ## Installing the toolchain
 
+One line, in Terminal. It fetches this repository and runs the installer:
+
+    git clone https://github.com/columbia-university-school-of-the-arts/cms-f26.git && bash cms-f26/setup.sh
+
 `setup.sh` installs Homebrew, git, the GitHub CLI, and Claude Code, in that
 order. It is safe to run more than once: anything already present is reported
 and left alone.
 
 **macOS only for now.** Windows is being worked out; see below.
+
+### Signing in during the clone
+
+This repository is private, so `git clone` asks who you are. **Two things
+about that prompt surprise almost everyone.**
+
+**Your GitHub password will not work.** GitHub stopped accepting passwords on
+the command line in 2021. Where it says `Password:`, you paste a *personal
+access token* instead:
+
+1. Go to <https://github.com/settings/tokens> → **Generate new token
+   (classic)**
+2. Give it a name, and tick the **`repo`** checkbox
+3. Generate it, and copy it — GitHub shows it once and never again
+
+**The password prompt shows nothing while you paste.** No dots, no stars, no
+movement. That is deliberate, it is not a broken keyboard, and it is the
+single most common place people give up. Paste, press return, carry on.
+
+Once you have signed in once, your Mac remembers it. You will not be asked
+again.
+
+### Other ways to run it
+
+If you already have the repository:
 
     ./setup.sh --dry-run    # show every command, run none of them
     ./setup.sh --check      # report what you already have, change nothing
