@@ -89,7 +89,15 @@ They drift silently. Both scripts print their version on every run — bump
 `SETUP_VERSION` in **both** and re-upload after any change, and ask a stuck
 student what version theirs reports.
 
-Three files go to Canvas Files: `setup.sh`, `setup-wsl.sh`, and `WINDOWS.md`.
+Four files go to Canvas Files: `setup.sh`, `setup-wsl.sh`, `WINDOWS.md`, and
+the session sheet in `sessions/`. The sheet carries a version line at the top
+for the same reason the scripts print theirs.
+
+## In the room
+
+Each session's student sheet lives in [`sessions/`](sessions/), one file per
+week, with a copy on Canvas for anyone who cannot yet open this repository.
+Week 1 is [`sessions/week-01.md`](sessions/week-01.md).
 
 ## The course plugin
 
