@@ -84,6 +84,10 @@ just did. Ask what a PDF has that plain text does not.
 
 Second, the artifact comes back. Every gap is filled. Read it.
 
+Then ask Cowork to save it into your reader folder as a Markdown file, and
+check in Finder that it is there before you leave. Next week you copy that
+file into a repository.
+
 ---
 
 ## Falsify (8:30 to 8:50)
@@ -121,9 +125,9 @@ moved to the gaps list, and were they the ones you had already caught?
 - **The folder does not know what week anything is.** That lives in the
   syllabus, which is not in the folder. A confident week is filled in from
   somewhere else.
-- **Two readings are missing.** Two assigned texts have no PDF yet, so they
-  are not in your folder. Did the artifact say so, or did it work with what it
-  had and stay quiet?
+- **Two readings are missing.** If your artifact covers the whole reader: two
+  assigned texts have no PDF yet, so they are not in your folder. Did the
+  artifact say so, or did it work with what it had and stay quiet?
 
 Write these down. They are what this course studies.
 
@@ -136,10 +140,13 @@ Write these down. They are what this course studies.
    and a pull request by clicking. Next week you do the same thing from a
    terminal, and the words will already mean something.
    `https://github.com/skills/introduction-to-github`
-2. **Run the artifact a second time** with `/corpus-artifact` if you did not
-   finish in the room, and compare it with your first version.
+2. **Run the artifact a second time** with `/corpus-artifact`, at home, and
+   compare it with the version from the room and with your first one.
 3. **Press Customize** on the plugin's page in Cowork. Add one rule of your
    own, one you would actually want. Run it a third time.
+
+If the marketplace would not install for you in the room, tell us. Do item 1,
+and do items 2 and 3 next week.
 
 Bring every version to Week 2. The session opens by comparing what fifteen
 people made.
