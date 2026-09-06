@@ -1,7 +1,8 @@
 # Windows: set up WSL first
 
 **Not yet tested end to end.** This is written from the documentation and will
-be walked on a real machine before the first session. If a step here does not
+be walked on a real machine before the second session, 16 September, which is
+when the toolchain installs. If a step here does not
 match what you see, that is worth telling us — you will not be the only one.
 
 ## Why WSL
@@ -51,8 +52,10 @@ PowerShell.
 
 ## 3. Get the setup script and run it
 
-Download **`setup-wsl.sh`** from **Files** on the course Canvas site. It lands
-in your Windows Downloads folder, which WSL can see:
+In your Windows browser, signed in to GitHub, open **`setup-wsl.sh`** at the
+top of this repository and press the **download** button on the file's page
+(the arrow icon beside "Raw"). It lands in your Windows Downloads folder, which
+WSL can see:
 
 ```bash
 bash /mnt/c/Users/YOUR-WINDOWS-USERNAME/Downloads/setup-wsl.sh
