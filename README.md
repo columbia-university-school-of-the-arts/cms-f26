@@ -110,10 +110,12 @@ In Claude Code, or in Cowork under **Customize → Plugins → Add marketplace**
 your fleet borrows and from where, and `/checkpoint`, which restores a
 week's scaffold when your repository gets away from you.
 
-`cms-week1` carries one skill, `corpus-map`, which turns a folder of readings
-into a table whose every claim is sourced and whose gaps are declared rather
-than filled in. It is installed in the first session, in Cowork, and needs no
-repository.
+`cms-week1` carries `corpus-artifact`, which takes whatever a student asks to
+make from a folder of readings and holds it to four rules: every claim cites a
+file and a quotation, every relation between texts is stated as a line, every
+gap is declared rather than filled, and what the PDF conversion lost is named.
+`corpus-map` is the same skill with the shape fixed to a table. Both install
+in the first session, in Cowork, and need no repository.
 
 ## Your fleet repository
 

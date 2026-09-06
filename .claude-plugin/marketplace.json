@@ -13,7 +13,7 @@
     {
       "name": "cms-week1",
       "source": "./plugins/cms-week1",
-      "description": "Week 1: map a folder of course readings into a table whose claims are sourced and whose gaps are declared."
+      "description": "Week 1: make one artifact from a folder of course readings, any shape, under fixed rules: every claim sourced, every relation between texts stated, every gap declared."
     }
   ]
 }
