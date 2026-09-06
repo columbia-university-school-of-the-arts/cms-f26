@@ -1,6 +1,6 @@
 ---
 name: corpus-artifact
-description: Use when asked to make anything from a folder of course readings — a map, a genealogy, a timeline, a glossary, a staged debate, a table — where the result must be checkable. Applies fixed rules to whatever shape is asked for: every claim sourced to a file and a quotation, every relation between texts stated as a line, every gap declared, every conversion loss named.
+description: "Use when asked to make anything from a folder of course readings — a map, a genealogy, a timeline, a glossary, a staged debate, a table — where the result must be checkable. Applies fixed rules to whatever shape is asked for: every claim sourced to a file and a quotation, every relation between texts stated as a line, every gap declared, every conversion loss named."
 ---
 
 # Making an artifact from a corpus you did not write
