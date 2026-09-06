@@ -14,9 +14,14 @@ once you are in the room.
 
 ## Installing the toolchain
 
-**On a Mac.** Download **`setup.sh`** from **Files** on the course Canvas site,
-then open Terminal (⌘-Space, type `Terminal`, press return) and paste this one
-line:
+The scripts live here, and you download them in your browser. Sign in to
+GitHub first: this repository is private to the class, and the invitation you
+accepted is what lets you see it.
+
+**On a Mac.** Open [`setup.sh`](setup.sh) and press the **download** button on
+the file's page (the arrow icon beside "Raw"). It lands in your Downloads
+folder. Then open Terminal (⌘-Space, type `Terminal`, press return) and paste
+this one line:
 
     bash ~/Downloads/setup.sh
 
@@ -46,8 +51,11 @@ Homebrew creating directories it does not yet own.
 
 ### If something looks wrong
 
-- **The browser shows the script as text instead of downloading it.** Use the
-  **Download** button in Canvas Files rather than clicking the filename.
+- **The browser shows the script as text instead of downloading it.** You
+  pressed **Raw**. Go back and press the download icon beside it.
+- **GitHub says the page does not exist.** You are not signed in, or you have
+  not accepted the invitation to the class organization. Check your email for
+  it; the same invitation is what lets you clone your repository later.
 - **`bash: ~/Downloads/setup.sh: No such file or directory`.** Your browser
   saved it somewhere else, or renamed it (`setup-1.sh` if you downloaded twice).
   Type `bash ` — with the trailing space — then drag the file from Finder into
@@ -80,18 +88,19 @@ needs administrator rights depends on your Windows version. If `wsl --install`
 refuses, tell us before the first session rather than fighting it.
 
 **Not yet tested end to end.** It will be walked on a real machine before
-9 September.
+16 September, which is the night the toolchain installs.
 
 ### For instructors
 
-This file is the source of truth; the copies on Canvas are what students run.
-They drift silently. Both scripts print their version on every run — bump
-`SETUP_VERSION` in **both** and re-upload after any change, and ask a stuck
-student what version theirs reports.
+Students download both scripts from this repository in a browser, so what
+they run is always the current file and nothing is copied to Canvas. Both
+scripts still print their version on every run; ask a stuck student what
+version theirs reports, since a download from before a fix is the likeliest
+cause.
 
-Four files go to Canvas Files: `setup.sh`, `setup-wsl.sh`, `WINDOWS.md`, and
-the session sheet in `sessions/`. The sheet carries a version line at the top
-for the same reason the scripts print theirs.
+The session sheets in `sessions/` do get a Canvas copy, pasted by hand for
+anyone who cannot yet open this repository, and each carries a version line at
+the top for the same reason.
 
 ## In the room
 
