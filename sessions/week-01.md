@@ -53,7 +53,8 @@ Decide what you will make from the folder. Anything, inside this shape:
    search for.
 2. **It relates at least two texts** and names the relation: argues with,
    extends, cites, contradicts, answers.
-3. **It is one Markdown file.** Next week it goes into a repository.
+3. **It is one Markdown file**, a plain-text file whose name ends in `.md`.
+   Next week it goes into a repository.
 
 Things that qualify: a map of every reading; a genealogy of one idea across
 the term; a timeline of the arguments; a glossary with cross-references; a
@@ -85,7 +86,8 @@ just did. Ask what a PDF has that plain text does not.
 Second, the artifact comes back. Every gap is filled. Read it.
 
 Then ask Cowork to save it into your reader folder as a Markdown file, and
-check in Finder that it is there before you leave. Next week you copy that
+check in Finder, or File Explorer on Windows, that it is there before you
+leave. Next week you copy that
 file into a repository.
 
 ---
