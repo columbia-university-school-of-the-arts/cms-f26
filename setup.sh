@@ -280,7 +280,7 @@ echo
 echo "         gh auth login"
 echo "         gh auth setup-git"
 echo
-echo "     Choose HTTPS, and authenticate in the browser when it offers."
+echo "     Choose GitHub.com, then HTTPS, and authenticate in the browser when it offers."
 echo "     The second command is what lets you push without a password later."
 echo
 echo "Then check everything is there:"
