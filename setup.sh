@@ -273,7 +273,7 @@ fi
 printf '%sDone.%s\n\n' "$GREEN$B" "$OFF"
 echo "Two things left, and neither is automatic:"
 echo
-echo "  1. Close this terminal and open a new one, so it picks up the changes."
+echo "  1. Open a new Terminal, so it picks up the changes to your new user parameters."
 echo
 echo "  2. Sign in to GitHub, then let git use that sign-in:"
 echo
