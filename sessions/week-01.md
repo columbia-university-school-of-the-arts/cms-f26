@@ -6,8 +6,8 @@ Tonight you leave with one thing you made from this course's readings, in a
 folder on your own laptop, that answers questions about itself. It will answer
 confidently and be partly wrong. Finding where is the exercise.
 
-You do not need to know how to code. You need to be precise, and you need to
-check. There is no terminal tonight. That is next week.
+You need no coding knowledge tonight, only precision and the habit of
+checking. There is no terminal tonight; that comes next week.
 
 You already have one piece of vocabulary from the AI Fluency course:
 **Delegation, Description, Discernment, Diligence.** Tonight does all four.
@@ -19,8 +19,8 @@ The margin says which is which.
 
 Four things to hold onto from it, in one line each.
 
-- A model predicts what comes next. It does not look anything up unless a tool
-  lets it, and it does not know what it does not know.
+- A model predicts what comes next. It looks nothing up unless a tool lets
+  it, and it has no sense of what it does not know.
 - Cowork is Claude working on files and folders you choose. A **project** is a
   folder plus your instructions about it.
 - An **agent** is a model that can act: read a file, run a converter, write a
@@ -73,9 +73,9 @@ artifact is. Write it down before anything else.
 
 **Specify the one rule.** The Engineer asks: **what counts as a text's central
 claim?** Its first sentence? What the author says they will argue? What they
-repeat most? The line you would quote if you had one? Pick one. Write it into
-the prompt as a second sentence. One rule only. This is the hard part, and it
-is the point.
+repeat most? The line you would quote if you had one? Pick one and write it
+into the prompt as a second sentence, one rule only. This is the hard part,
+and it is the point.
 
 **Build.** Send it. Two things happen and both are the lesson.
 
@@ -83,12 +83,11 @@ First, watch what Cowork does before it answers. It will convert your PDFs to
 plain text, without asking, because it cannot search a PDF. Ask it what it
 just did. Ask what a PDF has that plain text does not.
 
-Second, the artifact comes back. Every gap is filled. Read it.
+Second, the artifact comes back with every gap filled. Read it.
 
 Then ask Cowork to save it into your reader folder as a Markdown file, and
 check in Finder, or File Explorer on Windows, that it is there before you
-leave. Next week you copy that
-file into a repository.
+leave. Next week you copy that file into a repository.
 
 ---
 
@@ -100,16 +99,15 @@ If your artifact says what week anything is assigned, check that against the
 syllabus on Courseworks. The folder does not contain the syllabus, so how did
 it know? Find a place where it is wrong.
 
-Then take the one reading you actually did this week and find it in your
-artifact. Is that the claim? Is that who it argues with? Have those two authors
-ever met?
+Then take the one reading you did this week and find it in your artifact. Is
+that the claim? Is that who it argues with? Have those two authors ever met?
 
 Swap with the pair next to you. Where do the two artifacts disagree about the
 same text?
 
 **Then install the plugin, and ask again.** In Cowork, open **Customize**,
 then **Plugins**, then **Add marketplace**. Enter
-`columbia-university-school-of-the-arts/cms-f26`. Install **cms-week1**. In
+`columbia-university-school-of-the-arts/cms-f26`. Install **cms-corpus**. In
 your reader project, run `/corpus-artifact` and describe the same artifact.
 
 Four new rules apply: every claim carries a file and a quotation; every
@@ -131,7 +129,7 @@ moved to the gaps list, and were they the ones you had already caught?
   assigned texts have no PDF yet, so they are not in your folder. Did the
   artifact say so, or did it work with what it had and stay quiet?
 
-Write these down. They are what this course studies.
+Write these down, because they are what this course studies.
 
 ---
 
@@ -145,7 +143,7 @@ Write these down. They are what this course studies.
 2. **Run the artifact a second time** with `/corpus-artifact`, at home, and
    compare it with the version from the room and with your first one.
 3. **Press Customize** on the plugin's page in Cowork. Add one rule of your
-   own, one you would actually want. Run it a third time.
+   own, one you would want. Run it a third time.
 
 If the marketplace would not install for you in the room, tell us. Do item 1,
 and do items 2 and 3 next week.
