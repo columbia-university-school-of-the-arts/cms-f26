@@ -12,7 +12,7 @@ The prompt demonstration is BG's: RK's outline asks for it by name.
 
 # Week 2: the terminal, and your artifact in a repository
 
-Coding for Media Studies, Wednesday 16 September. Version 2026.09.12.
+Coding for Media Studies, Wednesday 16 September. Version 2026.09.16.
 
 Tonight the file you made last week gets a second life. First you widen it in
 Cowork and watch what gets invented. Then you install four tools from one
@@ -20,8 +20,10 @@ script, sign in twice, fetch a repository that was made for you, put your
 artifact in it, and make your first commit. You leave with your own work under
 version control and a machine that can run Claude Code.
 
-You did the GitHub Skills course, so you have already made a commit once, in a
-browser. Tonight is the same thing from a terminal.
+Nobody has used git before tonight. That is fine: the words arrive first on
+the projector, then on your own screen, and the interactive course that
+explains them properly is this week's homework, once you have something of
+your own to explain.
 
 **Bring** your artifact, and every version of it you made.
 
@@ -82,23 +84,29 @@ tell yet.
 
 ---
 
-## Cowork: widen it (7:20 to 7:45)
+## GitHub, in ten minutes (7:20 to 7:30)
 
-First, Behrang demonstrates how a system rewrites your prompt before it makes
-an image. Watch for what arrives in the picture that nobody asked for.
+Nobody types. On the projector: what version control is, why Git and GitHub
+are two things, and what a repository, a commit, a clone, and a push are,
+each shown on a real repository. These are the six words the rest of the
+evening uses.
 
-Then, in your reader project, ask Cowork to find three sources outside the
+---
+
+## Cowork: widen it (7:30 to 7:45)
+
+In your reader project, ask Cowork to find three sources outside the
 folder that bear on your artifact, and to add each with a citation: author,
 title, year, and where it found it. These are outside the folder, so the
 plugin's rules cannot check them. You can. Search the title. Search the
 author. Expect one of them to be invented. Write down which, and what the
 citation looked like before you checked.
 
-Keep the artifact as one Markdown file. You will need it at 8:30.
+Keep the artifact as one Markdown file. You will need it at 8:35.
 
 ---
 
-## The terminal (7:45 to 8:10)
+## The terminal (7:45 to 8:15)
 
 The files for tonight live in this repository, and you download them in your
 browser. Sign in to GitHub first; the repository is private to the class, and
@@ -123,8 +131,11 @@ When you are satisfied, paste:
 
     bash ~/Downloads/setup.sh
 
-It asks for your Mac password once, when Homebrew installs. Nothing shows while
-you type it, which is normal. Now leave it alone and watch.
+Before you run it, open a second Terminal window (⌘-N); you will need it
+later. It asks for your Mac password once, when Homebrew installs. Nothing
+shows while you type it, which is normal. Now leave it alone. While it runs,
+we watch a short film about the terminal, and then you try a few commands in
+the second window.
 
 The scrolling text is a shell doing four things in order: installing Homebrew
 (a package manager), then git, then the GitHub CLI, then Claude Code. Each
@@ -139,7 +150,7 @@ the exact text on your screen rather than retyping it from memory.
 
 ---
 
-## Sign in, and fetch your repository (8:10 to 8:30)
+## Sign in, and fetch your repository (8:15 to 8:35)
 
     gh auth login
 
@@ -178,10 +189,11 @@ username in the Announcement thread. Tell us; it takes two minutes to make.
 
 ---
 
-## Claude Code: your first commit (8:30 to 9:00)
+## Claude Code: your first commit (8:35 to 9:00)
 
-Copy your artifact into the repository folder. Finder works. Then, in the
-terminal, inside the repository:
+Copy your artifact into the repository's `cowork/` folder, which is where
+work done by hand lives. Finder works. Then, in the terminal, inside the
+repository:
 
     claude
 
@@ -222,10 +234,16 @@ Type `/exit` when done.
 
 ## Homework
 
-1. Run `/checkpoint` once, in Claude Code, inside your repository. It restores
+1. The GitHub course, now that you have a repository of your own. GitHub
+   Skills, "Introduction to GitHub":
+   <https://github.com/skills/introduction-to-github>, in a browser, under an
+   hour. With it, the first three videos of GitHub's beginner playlist,
+   thirty-three minutes:
+   <https://www.youtube.com/playlist?list=PL0lo9MOBetEFcp4SCWinBdpml9B2U25-f>.
+2. Run `/checkpoint` once, in Claude Code, inside your repository. It restores
    the course scaffold and leaves your own files alone. Better to meet it now
    than the week something breaks.
-2. Add tonight's three outside sources to the artifact in the repository,
+3. Add tonight's three outside sources to the artifact in the repository,
    with citations, and commit. Bring the diff.
 
 ---
