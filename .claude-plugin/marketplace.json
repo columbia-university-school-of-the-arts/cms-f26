@@ -11,9 +11,9 @@
       "description": "Fleet repo tooling: the provenance ledger skill and the weekly checkpoint command."
     },
     {
-      "name": "cms-week1",
-      "source": "./plugins/cms-week1",
-      "description": "Week 1: make one artifact from a folder of course readings, any shape, under fixed rules: every claim sourced, every relation between texts stated, every gap declared."
+      "name": "cms-corpus",
+      "source": "./plugins/cms-corpus",
+      "description": "Make one artifact from a folder of course readings, any shape, under fixed rules: every claim sourced, every relation between texts stated, every gap declared."
     }
   ]
 }

@@ -1,6 +1,6 @@
 ---
 name: corpus-map
-description: Use when asked specifically for a table of a folder of course readings — each reading, its central claim, the week it is assigned, one text it argues with. A fixed-shape request handled by corpus-artifact; kept so early installs keep working.
+description: Use when asked specifically for a table of a folder of course readings — each reading, its central claim, the week it is assigned, one text it argues with. A fixed-shape request handled by corpus-artifact; kept as its own command for the table.
 ---
 
 # corpus-map

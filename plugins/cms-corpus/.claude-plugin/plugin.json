@@ -1,0 +1,13 @@
+{
+  "name": "cms-corpus",
+  "version": "0.3.0",
+  "description": "Make one artifact from a folder of course readings, any shape, under fixed rules: every claim sourced, every relation between texts stated, every gap declared.",
+  "author": {
+    "name": "Behrang Garakani"
+  },
+  "license": "CC-BY-NC-SA-4.0",
+  "skills": [
+    "./skills/corpus-artifact",
+    "./skills/corpus-map"
+  ]
+}
