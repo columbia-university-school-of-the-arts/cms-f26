@@ -19,6 +19,17 @@ YouTube also needs a supported JavaScript runtime. Check `deno --version` or
 supported runtime if absent. For Node, pass `--js-runtimes node` to yt-dlp.
 Do not execute a downloaded installer without showing it to the student.
 
+Your shell cannot answer a password prompt or any other interactive question.
+Hand such a command to the student rather than running it: `sudo apt …` in WSL
+always, and any `brew` step that asks for the Mac password. Hand over any
+command that fails for want of permission, too, or that the student declined
+but still needs. Say why, give the exact line in a code block, and tell them:
+open a second Terminal window (⌘-N on a Mac; a new Ubuntu window on Windows),
+paste it there, type your password if asked (nothing shows while you type),
+and tell me when it finishes or paste back any error. Wait. Then verify it
+yourself with the version checks below before continuing. Never ask the student
+to type their password into this conversation.
+
 BG shares the class clip through Courseworks. Teach its download as an
 explicit terminal action before opening the app:
 
