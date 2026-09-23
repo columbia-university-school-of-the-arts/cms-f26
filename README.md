@@ -126,6 +126,41 @@ gap is declared rather than filled, and what the PDF conversion lost is named.
 `corpus-map` is the same skill with the shape fixed to a table. Both install
 in Cowork, and need no repository.
 
+## The cut-detector workshop
+
+Week 3's `cms-cuts` plugin helps you build an interactive video experiment in
+Claude Code, inside your own cloned fleet repository:
+
+```text
+/plugin marketplace update cms-f26
+/plugin install cms-cuts@cms-f26
+/cms-cuts:cut-lab
+```
+
+If the marketplace is not added yet, run the marketplace-add command above
+first. Restart Claude Code if the newly installed skill is not visible.
+
+BG shares the link through Courseworks. Start by watching the [workshop clip](https://www.youtube.com/watch?v=-1tza4BxVfA)
+and inventing a rule for what counts as a cut. You download the video yourself
+with `yt-dlp`; the plugin includes no movie file. Claude helps implement your
+rule in a local app with sliders, a change-score timeline, shot lengths,
+average shot length, and FFmpeg-rendered footage to inspect. Save your results
+and explain a false alarm or a missed cut before tuning again.
+
+BG releases an ingredient shelf after the first experiment: where to look,
+how to represent the frame, what change to measure, and how to decide. Each
+ingredient has a definition, controls and limitations; combine them into your
+own rule. His center-region example is available as one worked combination. PySceneDetect
+comes at the end for comparison. The shared interface supplies playback and
+recordkeeping; your first detection rule is deliberately left for you to
+invent. Downloads and preview clips stay on your machine; code and saved text
+results belong in your repository.
+
+The plugin's [skill](plugins/cms-cuts/skills/cut-lab/SKILL.md) guides each phase.
+Its [setup reference](plugins/cms-cuts/skills/cut-lab/references/setup.md)
+contains the commands and dependencies. It runs locally on macOS or inside
+WSL, with Python, FFmpeg and a supported yt-dlp JavaScript runtime.
+
 ## Your fleet repository
 
 Your own repository is `cms-f26-fleet-<your-github-username>`, created for

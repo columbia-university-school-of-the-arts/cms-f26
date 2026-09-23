@@ -14,6 +14,11 @@
       "name": "cms-corpus",
       "source": "./plugins/cms-corpus",
       "description": "Make one artifact from a folder of course readings, any shape, under fixed rules: every claim sourced, every relation between texts stated, every gap declared."
+    },
+    {
+      "name": "cms-cuts",
+      "source": "./plugins/cms-cuts",
+      "description": "Invent and tune a cut detector in a local video lab, inspect shot clips, then compare established approaches."
     }
   ]
 }
