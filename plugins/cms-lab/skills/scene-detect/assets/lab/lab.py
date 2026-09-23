@@ -23,6 +23,16 @@ def fingerprint(path):
     return digest.hexdigest()
 
 
+def source_url(path):
+    """The page a yt-dlp download came from, read from its sibling .info.json."""
+    info = Path(path).with_suffix('.info.json')
+    try:
+        data = json.loads(info.read_text())
+    except (OSError, ValueError):
+        return ''
+    return data.get('webpage_url') or data.get('original_url') or ''
+
+
 def timing(path):
     data = json.loads(command([
         'ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_frames',

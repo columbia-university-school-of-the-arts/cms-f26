@@ -37,7 +37,10 @@ can watch the clip and mark cuts by hand.
 
 ## Phase 1: invent before encountering the menu
 
-BG shares the clip through Courseworks: https://www.youtube.com/watch?v=-1tza4BxVfA.
+The clip is not built into this plugin. Ask the student which clip they are
+using: normally the one the instructor posted on Courseworks for this week,
+or a clip of their own. Get its URL (or, for a file they already have, where
+it came from) and use that throughout; never assume a particular film.
 Ask the student to watch it, mark a few
 cuts by time, and state one rule in their own words. Ask what visible change
 would count, and what might fool that rule. Wait for their answer. Do not
@@ -128,4 +131,4 @@ what it showed. To pick up later: `cd ~/cms-lab && claude`, then
 
 If a download or install fails, surface its actual error. Pair with a student
 whose download worked or continue manual annotation in the browser; do not
-invent a successful run or silently substitute another clip.
+invent a successful run or substitute a clip the student did not choose.

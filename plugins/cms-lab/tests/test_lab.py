@@ -45,6 +45,13 @@ class LabTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             lab.shot_table([float('nan')], 3)
 
+    def test_source_url_from_download_record(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            video = Path(tmp) / 'abc.mp4'
+            self.assertEqual(lab.source_url(video), '')
+            video.with_suffix('.info.json').write_text(json.dumps({'webpage_url': 'https://example.org/v/abc'}))
+            self.assertEqual(lab.source_url(video), 'https://example.org/v/abc')
+
     def test_video_measurement_and_ffmpeg_evidence(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'three-shots.mp4'
@@ -109,12 +116,15 @@ assert not at.exception, at.exception
 at.checkbox[1].check().run()
 at.checkbox[2].check().run()
 assert not at.exception, at.exception
+assert at.button[0].disabled  # no source recorded yet
+at.text_input[0].set_value('https://example.org/test-clip').run()
 at.button[0].click().run()
 assert not at.exception, at.exception
 runs = list(Path('runs').glob('*/run.json'))
 assert len(runs) == 1
 r = json.loads(runs[0].read_text())
 assert r['cuts_s'] == [1, 2]
+assert r['source_url_or_description'] == 'https://example.org/test-clip'
 assert r['sha256'] and r['versions']['ffmpeg']
 assert (runs[0].parent / 'shots.csv').is_file()
 assert (runs[0].parent / 'detector.py').is_file()

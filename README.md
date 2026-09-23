@@ -147,8 +147,8 @@ mark cuts by hand and let it install while you watch. Then start the project:
 If the marketplace is not added yet, run the marketplace-add command above
 first. Restart Claude Code if the newly installed skill is not visible.
 
-BG shares the link through Courseworks. Start by watching the [workshop clip](https://www.youtube.com/watch?v=-1tza4BxVfA)
-and inventing a rule for what counts as a cut. You download the video yourself
+The week's clip is linked on Courseworks; you can also bring your own.
+Start by watching it and inventing a rule for what counts as a cut. You download the video yourself
 with `yt-dlp`; the plugin includes no movie file. Claude helps implement your
 rule in a local app with sliders, a change-score timeline, shot lengths,
 average shot length, and FFmpeg-rendered footage to inspect. Save your results

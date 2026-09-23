@@ -11,7 +11,7 @@ import subprocess
 
 import streamlit as st
 import detector
-from lab import analyze, boundary_frames, boundaries, command, export_clip, fingerprint, shot_table
+from lab import analyze, boundary_frames, boundaries, command, export_clip, fingerprint, shot_table, source_url as recorded_source
 
 ROOT = Path(__file__).resolve().parent
 MEDIA = ROOT / 'media'
@@ -33,8 +33,9 @@ with st.expander('Choose a video', expanded=True):
         st.info('Your downloaded video goes in this lab’s media folder. No video is bundled with the course plugin.')
         st.stop()
     source = st.selectbox('Video in media/', files, format_func=lambda p: p.name)
-    source_url = st.text_input('Source URL or description', value='https://www.youtube.com/watch?v=-1tza4BxVfA')
-    st.caption('Confirm the source description matches the file you selected. It is saved as your attribution.')
+    source_url = st.text_input('Source URL or description', value=recorded_source(source), key=f'source-{source.name}',
+                               help='Filled in from the download record when yt-dlp saved one. Otherwise say where this clip came from.')
+    st.caption('Confirm the source matches the file you selected. It is saved as your attribution, and a run cannot be saved without it.')
 
 st.subheader('Watch before measuring')
 st.video(str(source))
@@ -146,7 +147,7 @@ if inspect_times:
 
 st.subheader('Save an experiment')
 label = st.text_input('Run label', value='invented-rule-01')
-if st.button('Save run and shot table', disabled=manual_error is not None):
+if st.button('Save run and shot table', disabled=manual_error is not None or not source_url.strip()):
     stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S.%fZ')
     folder = ROOT / 'runs' / stamp
     folder.mkdir(parents=True, exist_ok=False)
