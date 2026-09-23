@@ -18,7 +18,7 @@
     {
       "name": "cms-lab",
       "source": "./plugins/cms-lab",
-      "description": "Invent and tune a cut detector in a local video lab, inspect shot clips, then compare established approaches."
+      "description": "The CMS lab: run /cms-lab:init once to ready your machine, then projects such as the scene-detection workshop in ~/cms-lab."
     }
   ]
 }

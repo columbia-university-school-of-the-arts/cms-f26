@@ -131,6 +131,16 @@ then:
 ```text
 /plugin marketplace update cms-f26
 /plugin install cms-lab@cms-f26
+/cms-lab:init
+```
+
+`/cms-lab:init` brings your machine up to date with every tool the course
+has introduced so far, and records what it found in `~/cms-lab/lab-setup.md`.
+Run it first, and again whenever a week adds a tool; if you missed classes,
+it catches you up in one go. It is slow the first time, so run it before you
+mark cuts by hand and let it install while you watch. Then start the project:
+
+```text
 /cms-lab:scene-detect
 ```
 

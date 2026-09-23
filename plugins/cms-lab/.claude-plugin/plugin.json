@@ -1,8 +1,8 @@
 {
   "name": "cms-lab",
-  "version": "0.2.0",
-  "description": "Invent, tune, and audit a cut detector with a local interactive video lab; compare established methods after the instructor releases them.",
+  "version": "0.3.0",
+  "description": "The CMS lab: /cms-lab:init readies the machine once; projects such as /cms-lab:scene-detect then run in local folders under ~/cms-lab.",
   "author": {"name": "Behrang Garakani"},
   "license": "CC-BY-NC-SA-4.0",
-  "skills": ["./skills/scene-detect"]
+  "skills": ["./skills/init", "./skills/scene-detect"]
 }

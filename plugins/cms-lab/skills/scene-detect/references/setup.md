@@ -4,20 +4,21 @@ Work in the local lab folder, not a repository. Copy the sibling `assets/lab`
 directory to `~/cms-lab/scene-detect` once. Commands below run there.
 No API key, hosted service, or model inference is needed by the app.
 
-Before installing, explain and record what will run. On macOS, use Homebrew:
+System tools (Python, FFmpeg, and a JavaScript runtime for yt-dlp) come from
+`/cms-lab:init`, which records them in `~/cms-lab/lab-setup.md`. Read that file
+first. If it is missing or a tool is absent, send the student to
+`/cms-lab:init` rather than installing system tools here.
+
+This project installs only its Python packages, into its own folder. Explain
+and record what will run:
 
 ```sh
-brew install python ffmpeg deno
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 ```
 
-On Windows work inside the existing WSL environment: use `sudo apt update`
-and `sudo apt install python3-venv ffmpeg`, then the same venv commands.
-YouTube also needs a supported JavaScript runtime. Check `deno --version` or
-`node --version`; use the current yt-dlp EJS instructions below to install a
-supported runtime if absent. For Node, pass `--js-runtimes node` to yt-dlp.
-Do not execute a downloaded installer without showing it to the student.
+On Windows these run inside WSL. If `lab-setup.md` records Node rather than
+Deno, pass `--js-runtimes node` to yt-dlp.
 
 Your shell cannot answer a password prompt or any other interactive question.
 Hand such a command to the student rather than running it: `sudo apt …` in WSL

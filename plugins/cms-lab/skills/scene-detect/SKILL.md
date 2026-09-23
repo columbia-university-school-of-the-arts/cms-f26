@@ -29,6 +29,12 @@ mkdir -p ~/cms-lab && cd ~/cms-lab && claude
 If the student already started this workshop in `experiments/scene-detect/`
 inside their fleet repository, continue there rather than moving their work.
 
+The machine should already be ready: `/cms-lab:init` installs every tool
+in its list and writes `~/cms-lab/lab-setup.md`. If that file is missing, or
+`ffmpeg`, `ffprobe`, Python 3.10+ or the recorded JavaScript runtime no longer
+answers, stop and ask the student to run `/cms-lab:init` first. Meanwhile they
+can watch the clip and mark cuts by hand.
+
 ## Phase 1: invent before encountering the menu
 
 BG shares the clip through Courseworks: https://www.youtube.com/watch?v=-1tza4BxVfA.
