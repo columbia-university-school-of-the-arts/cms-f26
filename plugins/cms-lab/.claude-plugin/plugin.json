@@ -1,8 +1,8 @@
 {
-  "name": "cms-cuts",
+  "name": "cms-lab",
   "version": "0.1.0",
   "description": "Invent, tune, and audit a cut detector with a local interactive video lab; compare established methods after the instructor releases them.",
   "author": {"name": "Behrang Garakani"},
   "license": "CC-BY-NC-SA-4.0",
-  "skills": ["./skills/cut-lab"]
+  "skills": ["./skills/scene-detect"]
 }

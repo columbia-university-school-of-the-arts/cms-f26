@@ -128,13 +128,13 @@ in Cowork, and need no repository.
 
 ## The cut-detector workshop
 
-Week 3's `cms-cuts` plugin helps you build an interactive video experiment in
+Week 3's `cms-lab` plugin helps you build an interactive video experiment in
 Claude Code, inside your own cloned fleet repository:
 
 ```text
 /plugin marketplace update cms-f26
-/plugin install cms-cuts@cms-f26
-/cms-cuts:cut-lab
+/plugin install cms-lab@cms-f26
+/cms-lab:scene-detect
 ```
 
 If the marketplace is not added yet, run the marketplace-add command above
@@ -156,8 +156,8 @@ recordkeeping; your first detection rule is deliberately left for you to
 invent. Downloads and preview clips stay on your machine; code and saved text
 results belong in your repository.
 
-The plugin's [skill](plugins/cms-cuts/skills/cut-lab/SKILL.md) guides each phase.
-Its [setup reference](plugins/cms-cuts/skills/cut-lab/references/setup.md)
+The plugin's [skill](plugins/cms-lab/skills/scene-detect/SKILL.md) guides each phase.
+Its [setup reference](plugins/cms-lab/skills/scene-detect/references/setup.md)
 contains the commands and dependencies. It runs locally on macOS or inside
 WSL, with Python, FFmpeg and a supported yt-dlp JavaScript runtime.
 

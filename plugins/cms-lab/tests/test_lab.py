@@ -11,7 +11,7 @@ import unittest
 import cv2
 import numpy as np
 
-ASSETS = Path(__file__).resolve().parents[1] / 'skills/cut-lab/assets/lab'
+ASSETS = Path(__file__).resolve().parents[1] / 'skills/scene-detect/assets/lab'
 sys.path.insert(0, str(ASSETS))
 import lab
 

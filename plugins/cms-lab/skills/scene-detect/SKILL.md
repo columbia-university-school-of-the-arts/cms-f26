@@ -1,5 +1,5 @@
 ---
-name: cut-lab
+name: scene-detect
 description: "Build and investigate an interactive shot-boundary detector for the CMS video workshop: invent a rule, tune sliders, inspect FFmpeg clips, and compare methods when the instructor releases them. Use in Claude Code inside the student's cloned fleet repository."
 ---
 
@@ -21,7 +21,7 @@ PySceneDetect at this stage. The clip is downloaded by the student with
 `yt-dlp`; there is no course-supplied MP4.
 
 Read `references/setup.md` for the download and environment workflow. Copy
-`assets/lab/` beside this skill into `experiments/cut-lab/` in the student's
+`assets/lab/` beside this skill into `experiments/scene-detect/` in the student's
 repo, only if that destination does not exist. On later invocations inspect
 and continue their work; never overwrite their detector. The installed plugin
 is a template, not the place to save their changes.
