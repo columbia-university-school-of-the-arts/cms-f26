@@ -24,10 +24,12 @@ explicit terminal action before opening the app:
 
 ```sh
 mkdir -p media
-.venv/bin/python -m yt_dlp --no-playlist --max-downloads 1 -f 'bv*[height<=720]+ba/b[height<=720]' --merge-output-format mp4 --write-info-json -o 'media/%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=-1tza4BxVfA'
+.venv/bin/python -m yt_dlp --no-playlist --max-downloads 1 -f 'bv*[height<=720]+ba/b[height<=720]' -S 'vcodec:h264,res:720,acodec:m4a' --merge-output-format mp4 --write-info-json -o 'media/%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=-1tza4BxVfA'
 ```
 
 Explain format selection, the output path, and why merging needs FFmpeg.
+The `-S` sort prefers H.264 video and AAC audio, which every browser plays;
+YouTube otherwise picks AV1, which Safari plays only on recent Macs.
 `--max-downloads 1` can report the limit reached after successfully saving the
 one video; inspect the output rather than retrying blindly. `--merge-output-format`
 sets the container when merging; a single-stream fallback may keep its own
