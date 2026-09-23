@@ -172,4 +172,4 @@ if st.button('Save run and shot table', disabled=manual_error is not None):
         writer = csv.DictWriter(output, fieldnames=list(shots[0]))
         writer.writeheader()
         writer.writerows(shots)
-    st.success(f'Saved {folder.relative_to(ROOT)}. Media and previews stay outside git; inspect the text evidence before committing.')
+    st.success(f'Saved {folder.relative_to(ROOT)}. Record it in experiment.md.')

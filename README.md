@@ -119,7 +119,14 @@ in Cowork, and need no repository.
 ## The cut-detector workshop
 
 Week 3's `cms-lab` plugin helps you build an interactive video experiment in
-Claude Code, inside your own cloned fleet repository:
+Claude Code. It works in a local folder of your own, `~/cms-lab/`, with one
+folder per project; nothing goes to GitHub. Start Claude Code there:
+
+```text
+mkdir -p ~/cms-lab && cd ~/cms-lab && claude
+```
+
+then:
 
 ```text
 /plugin marketplace update cms-f26
@@ -143,8 +150,8 @@ ingredient has a definition, controls and limitations; combine them into your
 own rule. His center-region example is available as one worked combination. PySceneDetect
 comes at the end for comparison. The shared interface supplies playback and
 recordkeeping; your first detection rule is deliberately left for you to
-invent. Downloads and preview clips stay on your machine; code and saved text
-results belong in your repository.
+invent. Everything, code, notes, saved runs, the video, stays in
+`~/cms-lab/scene-detect/` on your machine.
 
 The plugin's [skill](plugins/cms-lab/skills/scene-detect/SKILL.md) guides each phase.
 Its [setup reference](plugins/cms-lab/skills/scene-detect/references/setup.md)

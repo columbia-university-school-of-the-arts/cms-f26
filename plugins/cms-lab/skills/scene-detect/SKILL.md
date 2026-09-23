@@ -1,14 +1,33 @@
 ---
 name: scene-detect
-description: "Build and investigate an interactive shot-boundary detector for the CMS video workshop: invent a rule, tune sliders, inspect FFmpeg clips, and compare methods when the instructor releases them. Use in Claude Code inside the student's cloned fleet repository."
+description: "Build and investigate an interactive shot-boundary detector for the CMS video workshop: invent a rule, tune sliders, inspect FFmpeg clips, and compare methods when the instructor releases them. Works in a local lab folder, ~/cms-lab/scene-detect, not in a repository."
 ---
 
 # A cut is a decision
 
 Help the student turn their own definition of a cut into a working, inspectable
-artifact. Students have Claude Code installed and their repository cloned, but
-may never have used it or committed a file. Explain each command's purpose in
-one sentence. Use the existing repository; do not create another.
+artifact. Students have Claude Code installed but may be new to it. Explain
+each command's purpose in one sentence.
+
+## Where the work lives
+
+The lab is a set of plain local folders, one per project, under `~/cms-lab/`.
+This project's folder is `~/cms-lab/scene-detect/`. It is the student's own
+workspace on their own machine: not their fleet repository, not a fork, and
+nothing is pushed anywhere. Do not create a GitHub repository, clone, fork, or
+commit for this workshop.
+
+Claude Code should run from inside `~/cms-lab`. If the current directory is not
+`~/cms-lab` or a folder under it, stop. Tell the student to type `/exit`,
+then paste this line into the same Terminal, then run `/cms-lab:scene-detect`
+again:
+
+```sh
+mkdir -p ~/cms-lab && cd ~/cms-lab && claude
+```
+
+If the student already started this workshop in `experiments/scene-detect/`
+inside their fleet repository, continue there rather than moving their work.
 
 ## Phase 1: invent before encountering the menu
 
@@ -21,8 +40,8 @@ PySceneDetect at this stage. The clip is downloaded by the student with
 `yt-dlp`; there is no course-supplied MP4.
 
 Read `references/setup.md` for the download and environment workflow. Copy
-`assets/lab/` beside this skill into `experiments/scene-detect/` in the student's
-repo, only if that destination does not exist. On later invocations inspect
+`assets/lab/` beside this skill into `~/cms-lab/scene-detect/`, only if that
+destination does not exist. On later invocations inspect
 and continue their work; never overwrite their detector. The installed plugin
 is a template, not the place to save their changes.
 
@@ -63,8 +82,9 @@ using open-source libraries. Preserve earlier variants
 meaningful parameters. The shelf is broad; nobody must use every ingredient. BG’s center-region
 example illustrates one combination and does not replace the student’s choice.
 Add new dependencies only for the selected ingredients. Record exact versions,
-licenses and sources in `notes/INTEGRATIONS.md`; conceptual borrowing goes in
-`notes/PATTERNS.md`. Credit the shared interface too.
+licenses and sources under **Borrowed** in `experiment.md`, code and ideas
+alike, with a classmate's name when the idea is theirs. Credit the shared
+interface too.
 
 ## Phase 3: tune, inspect, defend
 
@@ -91,14 +111,14 @@ the same local input; map its scene intervals to the same boundary convention.
 Inspect disagreements using the same FFmpeg previews. Do not call its output
 ground truth or replace the student's implementation with it.
 
-## Finish with a first commit
+## Finish by taking stock
 
-The app ignores downloaded media, rendered clips and the virtual environment;
-code, `experiment.md`, run JSON and text evidence should be versioned. Inspect
-`git status` and the staged diff with the student, stage only named workshop
-files, explain commit and push, and help them record the work in their own
-repo. Do not include media, unrelated files, credentials, or the corpus.
-Do not run `/checkpoint` as a prerequisite or use it to reset their experiment.
+Nothing is committed or pushed. Before the student stops, show them what is in
+`~/cms-lab/scene-detect/`: their `detector.py` and any variants, `experiment.md`,
+and each saved run under `runs/`. The video, rendered clips and `.venv` are
+there too and stay there. Make sure `experiment.md` names every saved run and
+what it showed. To pick up later: `cd ~/cms-lab && claude`, then
+`/cms-lab:scene-detect`.
 
 If a download or install fails, surface its actual error. Pair with a student
 whose download worked or continue manual annotation in the browser; do not

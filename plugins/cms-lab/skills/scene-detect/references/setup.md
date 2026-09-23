@@ -1,7 +1,7 @@
 # Set up the local lab
 
-Work inside the student's cloned fleet repository. Copy the sibling
-`assets/lab` directory to `experiments/scene-detect` once. Commands below run there.
+Work in the local lab folder, not a repository. Copy the sibling `assets/lab`
+directory to `~/cms-lab/scene-detect` once. Commands below run there.
 No API key, hosted service, or model inference is needed by the app.
 
 Before installing, explain and record what will run. On macOS, use Homebrew:

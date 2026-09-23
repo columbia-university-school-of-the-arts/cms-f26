@@ -24,3 +24,8 @@ transition you found. Explain how you checked, including full playback.
 
 How do short and long shots differ? What happens when a boundary moves?
 The first and last shots belong to an excerpt, not necessarily complete shots.
+
+## Borrowed
+
+Every library you installed (name, exact version, license, where from) and
+every idea you took from somewhere else, including from a classmate, by name.
