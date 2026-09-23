@@ -98,16 +98,6 @@ scripts still print their version on every run; ask a stuck student what
 version theirs reports, since a download from before a fix is the likeliest
 cause.
 
-The session sheets in `sessions/` do get a Canvas copy, pasted by hand for
-anyone who cannot yet open this repository, and each carries a version line at
-the top for the same reason.
-
-## In the room
-
-Each session's student sheet lives in [`sessions/`](sessions/), one file per
-week, with a copy on Canvas for anyone who cannot yet open this repository.
-Week 1 is [`sessions/week-01.md`](sessions/week-01.md).
-
 ## The course plugin
 
 In Claude Code, or in Cowork under **Customize → Plugins → Add marketplace**:
