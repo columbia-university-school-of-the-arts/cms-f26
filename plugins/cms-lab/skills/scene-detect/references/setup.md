@@ -4,7 +4,8 @@ Work in the local lab folder, not a repository. Copy the sibling `assets/lab`
 directory to `~/cms-lab/scene-detect` once. Commands below run there.
 No API key, hosted service, or model inference is needed by the app.
 
-System tools (Python, FFmpeg, and a JavaScript runtime for yt-dlp) come from
+System tools (Python, FFmpeg, a JavaScript runtime for yt-dlp, and
+ImageMagick with a font file for on-screen text) come from
 `/cms-lab:init`, which records them in `~/cms-lab/lab-setup.md`. Read that file
 first. If it is missing or a tool is absent, send the student to
 `/cms-lab:init` rather than installing system tools here.
@@ -81,9 +82,18 @@ run includes the exact installed versions and Python version; also capture
 `pip freeze > requirements-lock.txt` after a successful classroom setup.
 FFmpeg's build-dependent license is in `ffmpeg -L`; log the actual build.
 
+Text on screen is the student's option, never a requirement: titles, shot
+numbers or timestamps on rendered clips or stills. Use the ImageMagick command
+and font file recorded in `lab-setup.md`, always passing `-font` with that
+path; Homebrew's ImageMagick has no default font. FFmpeg's `drawtext` takes
+the same file as `fontfile=`. Keep the unlabelled render as the evidence the
+app saves; labelled copies are for presentation. Record ImageMagick's version
+(`magick -version` or `convert -version`) with the run if it is used.
+
 Sources checked 23 September 2026:
 
 - [yt-dlp installation, formats and dependencies](https://github.com/yt-dlp/yt-dlp#readme)
 - [YouTube JavaScript runtime support](https://github.com/yt-dlp/yt-dlp/wiki/EJS)
 - [FFmpeg seeking and output options](https://www.ffmpeg.org/ffmpeg.html)
+- [ImageMagick text annotation](https://imagemagick.org/Usage/text/)
 - [Streamlit video playback](https://docs.streamlit.io/develop/api-reference/media/st.video)

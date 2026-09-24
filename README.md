@@ -166,7 +166,8 @@ invent. Everything, code, notes, saved runs, the video, stays in
 The plugin's [skill](plugins/cms-lab/skills/scene-detect/SKILL.md) guides each phase.
 Its [setup reference](plugins/cms-lab/skills/scene-detect/references/setup.md)
 contains the commands and dependencies. It runs locally on macOS or inside
-WSL, with Python, FFmpeg and a supported yt-dlp JavaScript runtime.
+WSL, with Python, FFmpeg, a supported yt-dlp JavaScript runtime, and
+ImageMagick for students who choose to put text on screen.
 
 ## Your fleet repository
 
