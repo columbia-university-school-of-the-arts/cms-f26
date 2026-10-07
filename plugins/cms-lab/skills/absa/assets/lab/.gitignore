@@ -1,0 +1,5 @@
+# Full review texts are copyrighted: keep them on this machine.
+reviews/*.txt
+work/
+.venv/
+__pycache__/
