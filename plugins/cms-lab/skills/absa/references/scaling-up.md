@@ -115,10 +115,3 @@ quotations. If you build a dashboard that shows sentences, put it behind a
 password, as the *Parasite* explorer does. Rules differ by country (US fair
 use; the EU's text-and-data-mining exceptions for research); for anything you
 publish, ask the library.
-
-## 10. Costs
-
-The full *Parasite* annotation of 108 reviews ran in 163 seconds. The pilots,
-checks and fixes around it took about a day of work and roughly $52 of model
-usage, most of it re-reading a long conversation. Paiva and Diecke's whole
-ChatGPT budget was $0.32. Plan for the day, not the 163 seconds.
