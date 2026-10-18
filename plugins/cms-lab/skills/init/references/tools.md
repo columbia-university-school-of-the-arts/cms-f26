@@ -18,6 +18,9 @@ in. A student without it follows the hub README's setup section first.
 | 3 | FFmpeg and FFprobe | `ffmpeg -version` and `ffprobe -version` | `brew install ffmpeg` | `sudo apt install -y ffmpeg` | scene-detect |
 | 3 | JavaScript runtime for yt-dlp | `deno --version`, else `node --version` | `brew install deno` | Deno's official installer, shown first; see the yt-dlp EJS page for supported runtimes and versions | scene-detect |
 | 3 | ImageMagick, with a font for text | `magick -version`, else `convert -version`; then render a word with the font file (see note) | `brew install imagemagick`; font `/System/Library/Fonts/Supplemental/Arial.ttf` ships with macOS | `sudo apt install -y imagemagick fonts-dejavu-core`; font `/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf` | scene-detect, for students who choose to put text on screen |
+| 7 | Git LFS | `git lfs version` and `git config --global --get filter.lfs.process` | `brew install git-lfs`, then `git lfs install` | `sudo apt install -y git-lfs`, then `git lfs install` | the fleet repository's sources |
+| 7 | monolith | `monolith -V` | `brew install monolith` | `sudo snap install monolith`; if snap is unavailable, the release binary (see note) | capturing web pages |
+| 7 | git identity | `git config --global user.email` prints an address | set from GitHub (see note) | same | every commit, inside WSL above all |
 
 Notes on rows:
 
@@ -41,5 +44,21 @@ Notes on rows:
   (with `convert` in place of `magick` on ImageMagick 6). Record the font
   path in `lab-setup.md`; projects pass it as `-font`, and FFmpeg's `drawtext`
   filter accepts the same file as `fontfile=`.
+- **Git LFS:** `git lfs install` runs once per machine and changes only the
+  student's global git settings. The check's second half reads one of those
+  settings, so a Git LFS that is installed but never set up fails it.
+- **monolith inside WSL** is untested; the snap needs systemd. Where snap is
+  unavailable, show the student this fallback before running it:
+  `mkdir -p ~/.local/bin && curl -L -o ~/.local/bin/monolith https://github.com/Y2Z/monolith/releases/latest/download/monolith-cli-linux-x86_64 && chmod +x ~/.local/bin/monolith`
+  On ARM machines (`uname -m` prints `aarch64`), use
+  `monolith-cli-linux-aarch64` in place of `monolith-cli-linux-x86_64`.
+  `~/.local/bin` must be on `PATH` for the check to find it.
+- **Git identity:** git signs every commit with a name and an email, and a
+  fresh WSL has neither. Ask the student for the name to sign with and run
+  `git config --global user.name "<name>"`. Take the email from
+  `gh api user --jq '"\(.id)+\(.login)@users.noreply.github.com"'`, GitHub's
+  private address for the account, and set `user.email` to it with
+  `git config --global user.email "<address>"`. Commits signed with it link to
+  the student's account and keep their own email out of the repository.
 - Python packages never go here. Each project installs its own into its own
   `.venv` under `~/cms-lab/<project>/`.

@@ -1,6 +1,6 @@
 ---
 name: init
-description: "Ready the student's machine for the CMS course lab: check and install every tool the course has introduced so far (git and GitHub sign-in, Python, FFmpeg, yt-dlp's JavaScript runtime, ImageMagick for on-screen text, and each later week's additions), create ~/cms-lab, and record the result. Run it first, and again whenever the course adds a tool; it catches up a student who missed any number of weeks. Safe to run repeatedly."
+description: "Ready the student's machine for the CMS course lab: check and install every tool the course has introduced so far (git and GitHub sign-in, Python, FFmpeg, yt-dlp's JavaScript runtime, ImageMagick for on-screen text, Git LFS, monolith, and each later week's additions), create ~/cms-lab, and record the result. Run it first, and again whenever the course adds a tool; it catches up a student who missed any number of weeks. Safe to run repeatedly."
 ---
 
 # Get the lab ready
