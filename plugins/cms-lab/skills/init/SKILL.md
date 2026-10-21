@@ -71,12 +71,21 @@ installed. Projects read this file to know the machine is ready.
 ## 4. Hand off
 
 Tell the student, in two or three sentences, whether the machine is ready and
-what changed. Then give them the way into every lab project:
+what changed. Then work out where this session is running. Use the folder
+Claude Code was started in, which the session's environment lists as the
+primary working directory; the shell's current folder can drift between
+commands and is not the evidence.
+
+- **Already in `~/cms-lab`, or a folder under it:** the student is where the
+  projects run. Skip the `cd` and the restart, and name the project for the
+  current week.
+- **Anywhere else:** give them the way into every lab project, to run after
+  `/exit`:
 
 ```sh
 cd ~/cms-lab && claude
 ```
 
-and the project for the current week. If the week's by-hand work comes first
-(tonight, marking cuts in the clip), tell them to finish that before starting
-the project.
+Either way, name the project for the current week. If the week's by-hand work
+comes first (tonight, marking cuts in the clip), tell them to finish that
+before starting the project.

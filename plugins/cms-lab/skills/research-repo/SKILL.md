@@ -312,9 +312,13 @@ merged, the converter installed, and the thesis committed (or already there),
 with anything that failed. Their commits are on this machine; when they are
 ready, `git push` from the clone sends them to GitHub, where the gate runs.
 
-Then give them the way into the repository, to run after `/exit` here or in a
-new Terminal window (with the clone's full path, in quotes, if it lives
-elsewhere):
+Then work out where this session is running. Use the folder Claude Code was
+started in, which the session's environment lists as the primary working
+directory; the shell's current folder can drift between commands and is not
+the evidence. If that folder is `<clone>`, tell the student they are already
+in the repository and need no `cd` and no restart. Otherwise give them the way
+into the repository, to run after `/exit` here or in a new Terminal window
+(with the clone's full path, in quotes, if it lives elsewhere):
 
 ```sh
 cd ~/cms-f26-fleet-<login> && claude
