@@ -22,20 +22,20 @@ Panels (--view picks which, in rows of three):
   previous frame    the decoded frame before this one, which the prediction
                     is copied from (for frame 0, the gray keyframe)
 
-  --view heat        decoded | sent per pixel | motion vectors (default)
+  --view heat        decoded | sent per pixel | motion vectors
   --view amplified   decoded | sent, amplified | motion vectors
   --view both        decoded + motion vectors | sent, amplified | sent per pixel
   --view prediction  prediction | + sent, amplified | = decoded
   --view all         previous frame (n-1) | decoded + motion vectors (n) |
                      sent per pixel (n), above prediction (n) |
-                     + sent, amplified (n) | = decoded frame (n)
+                     + sent, amplified (n) | = decoded frame (n)   (default)
 
 Timeline: bytes the encoder stored for each frame, and the mean change in
 each colour channel, with a playhead that follows the video.
 
 Usage:
     python3 framediff.py input.mp4
-    python3 framediff.py input.mov -o out.mp4 --view all --crf 30
+    python3 framediff.py input.mov -o out.mp4 --view heat --crf 30
     python3 framediff.py --make-test            # builds and processes a test clip
 
 Needs ffmpeg + ffprobe on PATH, and: pip install numpy matplotlib
@@ -356,9 +356,9 @@ def main():
     ap.add_argument("--crf", type=int, default=23,
                     help="H.264 quality, 0-51: higher sends less new data, so more of "
                          "the 'sent per pixel' panel stays black (default 23)")
-    ap.add_argument("--view", choices=sorted(VIEWS), default="heat",
-                    help="which panels: heat (default), amplified, both, prediction, "
-                         "or all (both above prediction); see the top of this file")
+    ap.add_argument("--view", choices=sorted(VIEWS), default="all",
+                    help="which panels: all (default, two rows), heat, amplified, both, "
+                         "or prediction; see the top of this file")
     ap.add_argument("--gain", type=float, default=4,
                     help="for the amplified panel: how many times to boost the "
                          "distance from gray (default 4)")

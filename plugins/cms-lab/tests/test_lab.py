@@ -143,7 +143,8 @@ class FrameDiffTest(unittest.TestCase):
     def test_make_test_clip_end_to_end(self):
         script = Path(__file__).resolve().parents[1] / 'skills/frame-diff/assets/lab/framediff.py'
         with tempfile.TemporaryDirectory() as tmp:
-            result = subprocess.run([sys.executable, str(script), '--make-test', '-o', 'out/test.mp4'],
+            result = subprocess.run([sys.executable, str(script), '--make-test', '--view', 'heat',
+                                     '-o', 'out/test.mp4'],
                                     cwd=tmp, capture_output=True, text=True, timeout=300)
             self.assertEqual(result.returncode, 0, result.stderr[-2000:])
             out = Path(tmp) / 'out/test.mp4'
@@ -185,7 +186,8 @@ class FrameDiffTest(unittest.TestCase):
                             '-f', 'lavfi', '-i', 'mandelbrot=s=640x360:r=24000/1001,trim=duration=1',
                             '-filter_complex', '[0:v][1:v]concat=n=2:v=1[v]', '-map', '[v]',
                             '-c:v', 'libx264', '-pix_fmt', 'yuv420p', str(src)], check=True)
-            result = subprocess.run([sys.executable, str(script), str(src), '-o', 'out/film.mp4'],
+            result = subprocess.run([sys.executable, str(script), str(src), '--view', 'heat',
+                                     '-o', 'out/film.mp4'],
                                     cwd=tmp, capture_output=True, text=True, timeout=300)
             self.assertEqual(result.returncode, 0, result.stderr[-2000:])
             out = Path(tmp) / 'out/film.mp4'
@@ -206,7 +208,7 @@ class FrameDiffTest(unittest.TestCase):
         lab = Path(__file__).resolve().parents[1] / 'skills/frame-diff/assets/lab'
         with tempfile.TemporaryDirectory() as tmp:
             result = subprocess.run([sys.executable, str(lab / 'framediff.py'), '--make-test',
-                                     '--view', 'all', '-o', 'out/all.mp4'],
+                                     '-o', 'out/all.mp4'],   # all is the default view
                                     cwd=tmp, capture_output=True, text=True, timeout=300)
             self.assertEqual(result.returncode, 0, result.stderr[-2000:])
             out = Path(tmp) / 'out/all.mp4'

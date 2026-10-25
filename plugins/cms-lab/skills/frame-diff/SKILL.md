@@ -70,17 +70,18 @@ copied then copy gray, so what is left is what the frame itself sent.
 
 | `--view` | Panels |
 | --- | --- |
-| `heat` (default) | decoded video, sent per pixel, motion vectors |
+| `heat` | decoded video, sent per pixel, motion vectors |
 | `amplified` | decoded video, sent amplified, motion vectors |
 | `both` | decoded + motion vectors, sent amplified, sent per pixel |
 | `prediction` | prediction, + sent amplified, = decoded video |
-| `all` | previous frame (n−1), decoded + motion vectors (n), sent per pixel (n), above prediction (n), + sent amplified (n), = decoded frame (n) |
+| `all` (default) | previous frame (n−1), decoded + motion vectors (n), sent per pixel (n), above prediction (n), + sent amplified (n), = decoded frame (n) |
 
 `all` reads top left to bottom right as the decoder's steps: pieces of the
 previous frame, moved by the motion vectors, make the prediction; what was
 sent is added to it; the result is the decoded frame. It is the only view
-that shows two frames, which is why its labels say which. Its video is
-1920x1208, so it may need full screen.
+that shows two frames, which is why its labels say which. It is the default;
+its video is 1920x1208, so it may need full screen, and `--view heat` gives a
+single row when a smaller video suits better.
 
 The timeline's top strip is the bytes stored for each frame; frame 0 has
 nothing to copy from, so it is labelled rather than drawn to scale. The bottom
@@ -97,7 +98,7 @@ seconds of a moving test pattern, a hard cut, then three seconds of a zooming
 Mandelbrot fractal, and processes it:
 
 ```sh
-.venv/bin/python framediff.py --make-test -o out/framediff_test_framediff.mp4 --view all
+.venv/bin/python framediff.py --make-test -o out/framediff_test_framediff.mp4
 ```
 
 First ask the student what "sent per pixel" will show during the test
@@ -133,7 +134,7 @@ while the picture plainly changes, and what a slow camera move will do.
 ## Step 3: run
 
 ```sh
-.venv/bin/python framediff.py media/CLIP_excerpt.mp4 -o out/CLIP_excerpt_framediff.mp4 --view all
+.venv/bin/python framediff.py media/CLIP_excerpt.mp4 -o out/CLIP_excerpt_framediff.mp4
 ```
 
 Give a long-running command a timeout of ten minutes, or run it in the
