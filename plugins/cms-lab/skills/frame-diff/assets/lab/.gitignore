@@ -1,0 +1,5 @@
+# Videos and renders stay on this machine.
+media/
+out/
+.venv/
+__pycache__/

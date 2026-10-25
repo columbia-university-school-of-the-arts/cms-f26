@@ -21,6 +21,7 @@ in. A student without it follows the hub README's setup section first.
 | 7 | Git LFS | `git lfs version` and `git config --global --get filter.lfs.process` | `brew install git-lfs`, then `git lfs install` | `sudo apt install -y git-lfs`, then `git lfs install` | the fleet repository's sources |
 | 7 | monolith | `monolith -V` | `brew install monolith` | `sudo snap install monolith`; if snap is unavailable, the release binary (see note) | capturing web pages |
 | 7 | git identity | `git config --global user.email` prints an address | set from GitHub (see note) | same | every commit, inside WSL above all |
+| 8 | mpv | `mpv --version` | `brew install mpv` | `sudo apt install -y mpv` (see note) | frame-diff, to step forward and back one frame at a time |
 
 Notes on rows:
 
@@ -60,5 +61,11 @@ Notes on rows:
   private address for the account, and set `user.email` to it with
   `git config --global user.email "<address>"`. Commits signed with it link to
   the student's account and keep their own email out of the repository.
+- **mpv** is the course's frame-by-frame player: `.` steps one frame
+  forward and `,` one frame back (VLC and QuickTime step forward only).
+  Homebrew's `mpv` is a command-line formula, not a cask; projects launch it
+  from the terminal. Inside WSL it opens a window only on Windows 11, through
+  WSLg; on Windows 10 the check passes but no window appears, so record that
+  and have the student open videos from Windows instead.
 - Python packages never go here. Each project installs its own into its own
   `.venv` under `~/cms-lab/<project>/`.

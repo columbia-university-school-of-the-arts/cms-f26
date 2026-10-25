@@ -1,4 +1,5 @@
 """Run with the lab dependencies installed: python -m unittest discover -s tests."""
+import csv
 import json
 import importlib.util
 from pathlib import Path
@@ -136,6 +137,28 @@ assert at.metric[0].value == '0'
             result = subprocess.run([sys.executable, 'exercise_test.py'], cwd=dest, capture_output=True, text=True, timeout=120)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+
+
+class FrameDiffTest(unittest.TestCase):
+    def test_make_test_clip_end_to_end(self):
+        script = Path(__file__).resolve().parents[1] / 'skills/frame-diff/assets/lab/framediff.py'
+        with tempfile.TemporaryDirectory() as tmp:
+            result = subprocess.run([sys.executable, str(script), '--make-test', '-o', 'out/test.mp4'],
+                                    cwd=tmp, capture_output=True, text=True, timeout=300)
+            self.assertEqual(result.returncode, 0, result.stderr[-2000:])
+            out = Path(tmp) / 'out/test.mp4'
+            rows = list(csv.DictReader(open(out.with_suffix('.csv'))))
+            self.assertEqual(len(rows), 210)  # 7 s at 30 fps
+            # The hard cut at 4 s is the largest change, and the encoder puts an I-frame on it
+            spike = max(rows, key=lambda r: float(r['pixels_changed_pct']))
+            self.assertEqual(int(spike['frame']), 120)
+            self.assertEqual(spike['type'], 'I')
+            self.assertGreater(float(spike['pixels_changed_pct']), 90)
+            self.assertEqual(rows[0]['R_change_pct'], '0.0000')
+            probe = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v', '-count_packets',
+                                    '-show_entries', 'stream=nb_read_packets', '-of', 'csv=p=0', str(out)],
+                                   capture_output=True, text=True, check=True)
+            self.assertEqual(abs(int(probe.stdout.strip()) - 210) <= 1, True)
 
 if __name__ == '__main__':
     unittest.main()
