@@ -211,7 +211,7 @@ class FrameDiffTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr[-2000:])
             out = Path(tmp) / 'out/all.mp4'
             layout = json.loads(out.with_suffix('.json').read_text())
-            self.assertEqual(layout['sources'], [['mv', 'amp', 'heat'], ['pred', 'amp', 'dec']])
+            self.assertEqual(layout['sources'], [['prev', 'mv', 'heat'], ['pred', 'amp', 'dec']])
             raw = subprocess.run(['ffmpeg', '-v', 'error', '-i', str(out), '-vf', 'select=eq(n\\,60)',
                                   '-fps_mode', 'passthrough', '-frames:v', '1',
                                   '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], capture_output=True, check=True).stdout
@@ -220,6 +220,17 @@ class FrameDiffTest(unittest.TestCase):
             pred, dec = row2[:, :640], row2[:, 1280:]
             # Mid-shot the prediction is nearly the whole decoded frame
             self.assertLess(np.abs(pred - dec).mean(), 6)
+            # At the cut (frame 120) the previous-frame panel still shows frame 119's
+            # colour bars, while the decoded panel is already the fractal
+            raw = subprocess.run(['ffmpeg', '-v', 'error', '-i', str(out),
+                                  '-vf', 'select=between(n\\,119\\,120)', '-fps_mode', 'passthrough',
+                                  '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], capture_output=True, check=True).stdout
+            pair = np.frombuffer(raw, np.uint8).reshape(2, 2 * (84 + 360) + 320, 1920, 3).astype(int)
+            prev_120 = pair[1, 84:444, :640]
+            dec_119 = pair[0, 84 + 360 + 84:84 + 360 + 84 + 360, 1280:]
+            dec_120 = pair[1, 84 + 360 + 84:84 + 360 + 84 + 360, 1280:]
+            self.assertLess(np.abs(prev_120 - dec_119).mean(), 5)
+            self.assertGreater(np.abs(prev_120 - dec_120).mean(), 50)
             report = subprocess.run([sys.executable, str(lab / 'frame_report.py'), str(out), '120'],
                                     cwd=tmp, capture_output=True, text=True, check=True)
             self.assertIn('frame 120:', report.stdout)

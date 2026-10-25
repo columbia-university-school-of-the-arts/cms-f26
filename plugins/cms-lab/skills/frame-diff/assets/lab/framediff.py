@@ -19,12 +19,15 @@ Panels (--view picks which, in rows of three):
   prediction        what the decoder built before adding what was sent: the
                     decoded frame minus what was sent (exact for copied blocks
                     up to H.264's edge smoothing)
+  previous frame    the decoded frame before this one, which the prediction
+                    is copied from (for frame 0, the gray keyframe)
 
   --view heat        decoded | sent per pixel | motion vectors (default)
   --view amplified   decoded | sent, amplified | motion vectors
   --view both        decoded + motion vectors | sent, amplified | sent per pixel
   --view prediction  prediction | + sent, amplified | = decoded
-  --view all         the "both" row above the "prediction" row
+  --view all         previous frame | decoded + motion vectors | sent per pixel
+                     above prediction | + sent, amplified | = decoded
 
 Timeline: bytes the encoder stored for each frame, and the mean change in
 each colour channel, with a playhead that follows the video.
@@ -62,7 +65,8 @@ CHANNEL_COLORS = {"R": "#ff4d4d", "G": "#3ddc84", "B": "#4d8dff"}
 BYTES_COLOR = "#ffcc33"
 # --view: rows of panels, left to right. Each panel is (source, label).
 # Sources: dec (decoded), mv (motion vectors on decoded), amp (sent, amplified),
-# heat (sent per pixel), pred (prediction). Labels may use {gain}.
+# heat (sent per pixel), pred (prediction), prev (previous decoded frame).
+# Labels may use {gain}.
 ROW_BOTH = [("mv", "decoded + motion vectors"), ("amp", "sent, amplified {gain}x"),
             ("heat", "sent per pixel")]
 ROW_PREDICTION = [("pred", "prediction"), ("amp", "+ sent, amplified {gain}x"),
@@ -73,9 +77,12 @@ VIEWS = {
                    ("mv", "motion vectors")]],
     "both": [ROW_BOTH],
     "prediction": [ROW_PREDICTION],
-    "all": [ROW_BOTH, ROW_PREDICTION],
+    # Read top left to bottom right: pieces of the previous frame, moved by the
+    # motion vectors, make the prediction; what was sent is added to it.
+    "all": [[("prev", "previous frame"), ("mv", "decoded + motion vectors"),
+             ("heat", "sent per pixel")], ROW_PREDICTION],
 }
-PIPED = ["amp", "heat", "pred"]   # panels computed in Python and piped to ffmpeg, in this order
+PIPED = ["amp", "heat", "pred", "prev"]   # panels computed in Python and piped, in this order
 HEAT_MAX = 64          # levels from gray (0-255) that reach the top of the heat scale
 COPY_TOL = 6           # within this many levels of gray, a pixel counts as copied
 
@@ -224,14 +231,15 @@ def stored_frames(enc, pairs, w, h, fps, needed, gain):
     keyframe, so rounding in the colour conversion cannot tint a panel.
       amp:  the frame's own data in colour, distance from gray times gain
       heat: levels from gray, log scale
-      pred: decoded frame minus the frame's own data"""
+      pred: decoded frame minus the frame's own data
+      prev: the decoded frame before this one (the gray keyframe for frame 0)"""
     index, colours = heat_tables()
     fb = w * h * 3
     pair_proc = decode_rgb(pairs, w, h, fps, ["-flags2", "+showall", "-err_detect", "ignore_err"])
-    dec_proc = None
-    if "pred" in needed:
+    dec_proc, prev = None, None
+    if "pred" in needed or "prev" in needed:
         dec_proc = decode_rgb(enc, w, h, fps)
-        dec_proc.stdout.read(fb)                 # the gray lead frame
+        prev = np.frombuffer(dec_proc.stdout.read(fb), np.uint8).reshape(h, w, 3)  # gray lead
     while True:
         gray = pair_proc.stdout.read(fb)
         frame = pair_proc.stdout.read(fb)
@@ -240,6 +248,9 @@ def stored_frames(enc, pairs, w, h, fps, needed, gain):
         g = np.frombuffer(gray, np.uint8).reshape(h, w, 3).astype(np.int16)
         p = np.frombuffer(frame, np.uint8).reshape(h, w, 3).astype(np.int16)
         sent = p - g
+        if dec_proc:
+            d = dec_proc.stdout.read(fb)
+            dec = np.frombuffer(d if len(d) == fb else bytes(fb), np.uint8).reshape(h, w, 3)
         dev = np.minimum(np.abs(sent).max(axis=2), 255).astype(np.uint8)
         copied = float((dev <= COPY_TOL).mean() * 100)
         parts = []
@@ -250,12 +261,12 @@ def stored_frames(enc, pairs, w, h, fps, needed, gain):
                 parts.append(np.clip(sent * gain + 128, 0, 255).astype(np.uint8))
             elif name == "heat":
                 parts.append(colours[index[dev]])
+            elif name == "pred":
+                parts.append(np.clip(dec.astype(np.int16) - sent, 0, 255).astype(np.uint8))
             else:
-                d = dec_proc.stdout.read(fb)
-                if len(d) < fb:
-                    d = bytes(fb)
-                dec = np.frombuffer(d, np.uint8).reshape(h, w, 3).astype(np.int16)
-                parts.append(np.clip(dec - sent, 0, 255).astype(np.uint8))
+                parts.append(prev)
+        if dec_proc:
+            prev = dec
         yield np.ascontiguousarray(np.concatenate(parts, axis=1)).tobytes(), copied
     pair_proc.wait()
     if dec_proc:
