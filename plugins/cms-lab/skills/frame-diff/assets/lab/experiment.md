@@ -6,11 +6,11 @@ Source (URL or description):
 ## Prediction
 
 <!-- Before the first run: which moments will cost the encoder the most bytes?
-Where will "what each frame stores" stay gray while the picture plainly changes? -->
+Where will "sent per pixel" stay black while the picture plainly changes? -->
 
 ## Runs
 
-<!-- One line per run: output file, --crf, and what you looked at. -->
+<!-- One line per run: output file, --view, --crf, and what you looked at. -->
 
 ## Frames worth showing
 
