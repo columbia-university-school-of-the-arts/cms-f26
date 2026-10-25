@@ -275,27 +275,29 @@ def stored_frames(enc, pairs, w, h, fps, needed, gain):
 
 
 def draw_header(path, panel_w, labels):
-    """One label band over a row of panels; a heat-map key under 'sent per pixel'."""
+    """One label band over a row of panels. Each label sits at the bottom of the
+    band, next to its own panel; the heat-map key, where there is one, above it."""
     total_w = panel_w * len(labels)
     fig = plt.figure(figsize=(total_w / 100, HEADER_H / 100), dpi=100)
     fig.patch.set_facecolor(BG)
     for i, text in enumerate(labels):
-        fig.text((i + 0.5) / len(labels), 0.68, text, ha="center", va="center",
+        fig.text((i + 0.5) / len(labels), 0.08, text, ha="center", va="bottom",
                  color=FG, fontsize=22, family="sans-serif")
     if "sent per pixel" in labels:
         bar_w = 260 / total_w
         cx = (labels.index("sent per pixel") + 0.5) / len(labels)
-        ax = fig.add_axes([cx - bar_w / 2, 0.24, bar_w, 0.10])
+        ax = fig.add_axes([cx - bar_w / 2, 0.62, bar_w, 0.10])
         index, colours = heat_tables()
         ax.imshow(colours[np.newaxis, :, :], aspect="auto", extent=(0, 255, 0, 1))
         ax.set_yticks([])
         ax.set_xticks([index[v] for v in (0, 1, COPY_TOL, 16, HEAT_MAX)])
         ax.set_xticklabels(["0", "1", str(COPY_TOL), "16", f"{HEAT_MAX}+"], fontsize=9,
                            color=FG)
+        ax.xaxis.tick_top()
         ax.tick_params(length=2, pad=1, colors=FG)
         for spine in ax.spines.values():
             spine.set_visible(False)
-        fig.text(cx + bar_w / 2 + 6 / total_w, 0.29, "levels sent", ha="left",
+        fig.text(cx + bar_w / 2 + 6 / total_w, 0.67, "levels sent", ha="left",
                  va="center", color=FG, fontsize=9)
     fig.savefig(path, dpi=100, facecolor=BG)
     plt.close(fig)
