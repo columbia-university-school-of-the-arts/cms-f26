@@ -148,25 +148,59 @@ class FrameDiffTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr[-2000:])
             out = Path(tmp) / 'out/test.mp4'
             rows = list(csv.DictReader(open(out.with_suffix('.csv'))))
-            self.assertEqual(len(rows), 210)  # 7 s at 30 fps
-            # The hard cut at 4 s is the largest change, and the encoder puts an I-frame on it
-            spike = max(rows, key=lambda r: float(r['pixels_changed_pct']))
-            self.assertEqual(int(spike['frame']), 120)
-            self.assertEqual(spike['type'], 'I')
-            self.assertGreater(float(spike['pixels_changed_pct']), 90)
+            self.assertEqual(len(rows), 210)  # 7 s at 30 fps, every frame once
+            self.assertTrue(all(r['type'] == 'P' for r in rows))
+            size = [int(r['bytes']) for r in rows]
+            # Frame 0 has nothing to copy from; after it, the hard cut at 4 s costs the most
+            self.assertGreater(size[0], 3 * sorted(size)[105])
+            self.assertEqual(max(range(1, 210), key=lambda i: size[i]), 120)
             self.assertEqual(rows[0]['R_change_pct'], '0.0000')
-            probe = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v', '-count_packets',
-                                    '-show_entries', 'stream=nb_read_packets', '-of', 'csv=p=0', str(out)],
-                                   capture_output=True, text=True, check=True)
-            self.assertEqual(abs(int(probe.stdout.strip()) - 210) <= 1, True)
-            # The panels keep their colour: the test pattern's bars are saturated,
-            # so a grey render has R, G and B equal at every pixel
-            raw = subprocess.run(['ffmpeg', '-v', 'error', '-ss', '2', '-i', str(out), '-frames:v', '1',
-                                  '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'],
-                                 capture_output=True, check=True).stdout
-            frame = np.frombuffer(raw, np.uint8).reshape(744, 1920, 3).astype(int)
-            spread = (frame.max(axis=2) - frame.min(axis=2))[64:424, :640]
-            self.assertGreater(spread.mean(), 60)
+
+            # Mid-shot the encoder copies the static bars; at the cut it sends the picture
+            copied = [float(r['copied_pct']) for r in rows]
+            self.assertGreater(copied[60], 80)
+            self.assertLess(copied[120], 30)
+
+            def panel(n, col):
+                raw = subprocess.run(['ffmpeg', '-v', 'error', '-i', str(out), '-vf', f'select=eq(n\\,{n})',
+                                      '-fps_mode', 'passthrough', '-frames:v', '1',
+                                      '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'],
+                                     capture_output=True, check=True).stdout
+                frame = np.frombuffer(raw, np.uint8).reshape(764, 1920, 3).astype(int)
+                return frame[84:444, col * 640:(col + 1) * 640]
+
+            # The decoded panel keeps its colour: saturated bars, R, G and B far apart
+            decoded = panel(60, 0)
+            self.assertGreater((decoded.max(axis=2) - decoded.min(axis=2)).mean(), 60)
+            # The heat panel is dark where the encoder copied and bright at the cut
+            self.assertLess(panel(60, 1).mean(), 40)
+            self.assertGreater(panel(120, 1).mean(), 100)
+
+    def test_panels_stay_in_step_at_23976_fps(self):
+        # Film-rate clips once put the piped panels a frame behind on a third of frames
+        script = Path(__file__).resolve().parents[1] / 'skills/frame-diff/assets/lab/framediff.py'
+        with tempfile.TemporaryDirectory() as tmp:
+            src = Path(tmp) / 'film.mp4'
+            subprocess.run(['ffmpeg', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=s=640x360:r=24000/1001:d=2',
+                            '-f', 'lavfi', '-i', 'mandelbrot=s=640x360:r=24000/1001,trim=duration=1',
+                            '-filter_complex', '[0:v][1:v]concat=n=2:v=1[v]', '-map', '[v]',
+                            '-c:v', 'libx264', '-pix_fmt', 'yuv420p', str(src)], check=True)
+            result = subprocess.run([sys.executable, str(script), str(src), '-o', 'out/film.mp4'],
+                                    cwd=tmp, capture_output=True, text=True, timeout=300)
+            self.assertEqual(result.returncode, 0, result.stderr[-2000:])
+            out = Path(tmp) / 'out/film.mp4'
+            rows = list(csv.DictReader(open(out.with_suffix('.csv'))))
+            raw = subprocess.run(['ffmpeg', '-v', 'error', '-i', str(out), '-vf', 'crop=1280:360:0:84',
+                                  '-f', 'rawvideo', '-pix_fmt', 'gray', '-'], capture_output=True, check=True).stdout
+            d = np.frombuffer(raw, np.uint8).reshape(-1, 360, 1280).astype(int)
+            self.assertEqual(len(d), len(rows))
+            dec, heat = d[:, :, :640], d[:, :, 640:]
+            change = [np.abs(dec[i] - dec[i - 1]).mean() for i in range(1, len(d))]
+            self.assertFalse([i for i, c in enumerate(change, 1) if c < 0.3], 'a decoded frame repeats')
+            cut = int(np.argmax(change)) + 1
+            sizes = [int(r['bytes']) for r in rows]
+            self.assertEqual(cut, max(range(1, len(rows)), key=lambda i: sizes[i]))
+            self.assertEqual(cut, int(np.argmax([heat[i].mean() for i in range(1, len(d))])) + 1)
 
 if __name__ == '__main__':
     unittest.main()

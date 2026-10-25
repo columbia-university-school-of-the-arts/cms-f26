@@ -1,15 +1,17 @@
 ---
 name: frame-diff
-description: "Show what changes from one frame to the next: framediff.py renders the student's clip as three labeled panels (original, changed pixels, unchanged pixels) over a per-channel change timeline with the encoder's I-frames marked, then opens the result in mpv to step forward and back frame by frame. Works in ~/cms-lab/frame-diff, not in a repository."
+description: "Show what a video encoder actually stores for each frame: framediff.py re-encodes the student's clip as P-frames and renders three labeled panels (the decoded video, each frame's own data decoded against gray, the encoder's motion vectors) over a timeline of bytes stored per frame and per-channel change, then opens the result in mpv to step forward and back frame by frame. frame_report.py measures single frames. Works in ~/cms-lab/frame-diff, not in a repository."
 ---
 
 # Most of a frame is the last frame
 
-Help the student see what a video encoder sees: in most frames, most pixels
-barely change, and compression spends its bits on the rest. `framediff.py`
-makes that visible. The student predicts, runs, then steps through the result
-in mpv one frame at a time. Students have Claude Code but may be new to it:
-say what each command does in one sentence before running it.
+Help the student see what a video encoder stores. In most frames the encoder
+sends almost nothing: it copies blocks from the frame before, moves some of
+them, and pays only for corrections and for what it cannot find. `framediff.py`
+shows that data directly rather than a difference computed from pixels. The
+student predicts, runs, then steps through the result in mpv one frame at a
+time. Students have Claude Code but may be new to it: say what each command
+does in one sentence before running it.
 
 ## Where the work lives
 
@@ -32,7 +34,10 @@ forward but not back. Mention `/cms-lab:init` for later.
 Copy `assets/lab/` beside this skill to `~/cms-lab/frame-diff/` only if that
 folder does not exist. On later runs, read `experiment.md` and continue; never
 overwrite the student's notes. The installed plugin is a template, not the
-place to save their changes.
+place to save their changes. If the folder exists from version 0.7 (its
+`framediff.py` mentions `--threshold`), copy the new `framediff.py` and
+`frame_report.py` over the old script only after the student agrees, and keep
+their `experiment.md` and `out/`.
 
 The project installs its two Python packages (numpy, matplotlib) into its own
 folder:
@@ -41,6 +46,27 @@ folder:
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 ```
+
+## What the three panels are
+
+Explain this before the first run, in your own words:
+
+- **decoded video**: the script's own H.264 encode of the clip, as a viewer
+  sees it. The script makes this encode on purpose: one flat gray keyframe,
+  then every frame of the clip as a P-frame, with no B-frames and no new
+  keyframes at cuts. The student's download had its own encoder and settings;
+  this is a controlled copy, so what they see is one encoder's choices, made
+  visible.
+- **what each frame stores**: each P-frame decoded on its own, predicting from
+  the gray keyframe instead of from the frame before it. Blocks the encoder
+  only copied come out gray, because it copied gray. What it paid to send
+  shows on top: corrections, and blocks drawn from scratch.
+- **motion vectors**: the encoder's arrows, drawn over the decoded video. Each
+  says "copy this block from there in the previous frame".
+
+The timeline's top strip is the bytes stored for each frame; frame 0 has
+nothing to copy from, so it is labelled rather than drawn to scale. The bottom
+strip is the mean change in each colour channel from the frame before.
 
 ## Step 1: the test clip
 
@@ -52,11 +78,14 @@ Mandelbrot fractal, and processes it:
 .venv/bin/python framediff.py --make-test -o out/framediff_test_framediff.mp4
 ```
 
-First ask the student what the timeline should look like: where a spike
-should be, and what the line should do the rest of the time. Then open the
-result (Step 4). The cut at 4 s should be one tall spike with an I-frame line
-on it. If it is not, something is wrong with the install; show the error
-rather than continuing.
+First ask the student what the middle panel will show during the test
+pattern, and what it will show at the cut. Then open the result (Step 4). At
+2 s the middle panel is almost all gray: the bars do not move, so the encoder
+never sends them again. At frame 120 (4 s) it is the whole fractal, and the
+top strip spikes. One block in the middle of that frame comes out the wrong
+colour: the encoder copied it from the colour-bars frame and corrected it, and
+against gray only the correction shows. If none of this appears, something is
+wrong with the install; show the error rather than continuing.
 
 ## Step 2: the student's clip
 
@@ -67,7 +96,7 @@ command in the scene-detect skill's `references/setup.md`, into `media/`.
 Record the clip and its source in `experiment.md`.
 
 Processing runs at about real time for 720p video, so a three-minute clip
-takes three to four minutes and the output is large (over 100 MB). For a
+takes about three minutes and the output is large (around 100 MB). For a
 first look, cut an excerpt of 20 to 30 seconds:
 
 ```sh
@@ -75,8 +104,8 @@ ffmpeg -ss 00:00:40 -t 25 -i media/CLIP.mp4 -c:v libx264 -crf 18 -c:a aac media/
 ```
 
 Before running, ask the student to write a prediction in `experiment.md`:
-where they expect spikes, where they expect the "changed" panel to be nearly
-black, and what grain or a slow camera move will do.
+which moments will cost the most bytes, where the middle panel will stay gray
+while the picture plainly changes, and what a slow camera move will do.
 
 ## Step 3: run
 
@@ -87,12 +116,13 @@ black, and what grain or a slow camera move will do.
 Give a long-running command a timeout of ten minutes, or run it in the
 background and check on it; do not let the shell's default time limit kill it
 part way, which leaves a broken MP4. The script also writes
-`out/CLIP_excerpt_framediff.csv`, one row per frame: time, frame type (I, P
-or B), mean change in each colour channel, and percentage of pixels changed.
+`out/CLIP_excerpt_framediff.csv`, one row per frame: time, frame type, bytes
+stored, and the mean change in R, G and B.
 
-`--threshold` (default 8, out of 255) sets how much a pixel must change to
-count as changed. Grainy or low-light footage often needs 15 to 25. Change it
-one run at a time and save each output under its own name.
+`--crf` (default 23, range 0 to 51) is the encoder's quality setting. A
+higher number lets it send less, so more of the middle panel stays gray and
+the bytes fall; a lower one makes it send more. Try 18 and 35 on the same
+excerpt, one run at a time, each saved under its own name.
 
 ## Step 4: open it in mpv
 
@@ -105,48 +135,52 @@ nohup mpv --pause --keep-open=yes --osd-level=3 --osd-status-msg='frame ${estima
 
 Tell the student the keys: `.` one frame forward, `,` one frame back, space
 to play or pause, `[` and `]` to slow down or speed up, `q` to quit. The
-frame number on screen matches the CSV's `frame` column to within a frame.
+frame number on screen matches the CSV's `frame` column.
 
 Inside WSL, mpv opens a window only on Windows 11 (WSLg). If no window
 appears, tell the student to open the file from Windows instead:
 `explorer.exe out` opens the folder.
 
-## Step 5: read it
+## Step 5: read it, one frame at a time
 
-Look at the timeline together, then step to the moments it points to:
-
-- The yellow dashed lines are where the encoder placed full images
-  (I-frames). On a YouTube download they usually fall every few seconds,
-  whether or not there is a cut. Ask why an encoder would do that.
-- A spike in the top strip and a bottom strip near 100% is a cut or a flash.
-  Step across it with `,` and `.`.
-- The "unchanged" panel is what the encoder can copy almost for free from
-  the previous frame; the "changed" panel is what it has to pay for.
-  Together they rebuild the original exactly.
-- On black-and-white footage the R, G and B lines lie on top of one another,
-  and blue, drawn last, hides the others. That is the footage, not a bug.
-
-Have the student note two or three frames worth showing in `experiment.md`
-with frame numbers, and compare them with their prediction.
-
-Be honest about what the picture is. The panels are computed from decoded
-pixels. The encoder does not store a P-frame as a picture of differences: it
-stores motion vectors (copy this block from there) and a residual correcting
-the prediction. To show the encoder's own motion vectors, re-encode without
-B-frames and draw them:
+When the student finds a frame worth discussing, measure it:
 
 ```sh
-ffmpeg -i media/CLIP_excerpt.mp4 -c:v libx264 -g 48 -bf 0 -crf 23 -an out/teach.mp4
-ffmpeg -flags2 +export_mvs -i out/teach.mp4 -vf codecview=mv=pf -c:v libx264 -crf 18 out/teach_mv.mp4
+.venv/bin/python frame_report.py out/CLIP_excerpt_framediff.mp4 120 121
 ```
+
+For each frame it prints the bytes stored against the clip's median and the
+share of the frame the encoder copied, and saves the three panels as PNGs in
+`out/CLIP_excerpt_framediff_frames/` for the student's notes or slides.
+"Copied" is read from the middle panel: a block counts as copied when it is
+within 6 of flat gray, so a block that got a very small correction counts too.
+
+Things to look for together:
+
+- **Change the encoder ignored.** A background can visibly shift in the
+  decoded video while the middle panel stays gray there. The encoder judged a
+  copy close enough and sent nothing; the decoded picture is the copy. Raising
+  `--crf` makes this happen more often.
+- **Cuts and flashes.** A spike in the top strip and a middle panel full of
+  picture: there was nothing to copy from.
+- **Motion that costs little.** A camera pan can be almost free: arrows across
+  the whole frame, little in the middle panel. The encoder moves blocks rather
+  than redrawing them.
+- **Bytes against change.** The two strips mostly rise together, but not
+  always. Ask the student to find a frame where the colour change is large and
+  the bytes are small, or the reverse, and explain it with the panels.
+
+Have the student note two or three frames worth showing in `experiment.md`
+with frame numbers and `frame_report.py`'s numbers, and compare them with
+their prediction.
 
 ## Finish by taking stock
 
 Nothing is committed or pushed. Show the student what is in
 `~/cms-lab/frame-diff/`: `experiment.md`, each output video and CSV under
-`out/`, and the clip under `media/`. Make sure `experiment.md` names every
-run and what it showed. To pick up later: `cd ~/cms-lab && claude`, then
-`/cms-lab:frame-diff`.
+`out/`, saved frames, and the clip under `media/`. Make sure `experiment.md`
+names every run and what it showed. To pick up later: `cd ~/cms-lab && claude`,
+then `/cms-lab:frame-diff`.
 
 If a run or install fails, show its actual error. Do not invent a result or
 substitute a clip the student did not choose.
