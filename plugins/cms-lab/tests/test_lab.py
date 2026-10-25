@@ -202,5 +202,28 @@ class FrameDiffTest(unittest.TestCase):
             self.assertEqual(cut, max(range(1, len(rows)), key=lambda i: sizes[i]))
             self.assertEqual(cut, int(np.argmax([heat[i].mean() for i in range(1, len(d))])) + 1)
 
+    def test_view_all_two_rows_and_prediction(self):
+        lab = Path(__file__).resolve().parents[1] / 'skills/frame-diff/assets/lab'
+        with tempfile.TemporaryDirectory() as tmp:
+            result = subprocess.run([sys.executable, str(lab / 'framediff.py'), '--make-test',
+                                     '--view', 'all', '-o', 'out/all.mp4'],
+                                    cwd=tmp, capture_output=True, text=True, timeout=300)
+            self.assertEqual(result.returncode, 0, result.stderr[-2000:])
+            out = Path(tmp) / 'out/all.mp4'
+            layout = json.loads(out.with_suffix('.json').read_text())
+            self.assertEqual(layout['sources'], [['mv', 'amp', 'heat'], ['pred', 'amp', 'dec']])
+            raw = subprocess.run(['ffmpeg', '-v', 'error', '-i', str(out), '-vf', 'select=eq(n\\,60)',
+                                  '-fps_mode', 'passthrough', '-frames:v', '1',
+                                  '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], capture_output=True, check=True).stdout
+            frame = np.frombuffer(raw, np.uint8).reshape(2 * (84 + 360) + 320, 1920, 3).astype(int)
+            row2 = frame[84 + 360 + 84:84 + 360 + 84 + 360]
+            pred, dec = row2[:, :640], row2[:, 1280:]
+            # Mid-shot the prediction is nearly the whole decoded frame
+            self.assertLess(np.abs(pred - dec).mean(), 6)
+            report = subprocess.run([sys.executable, str(lab / 'frame_report.py'), str(out), '120'],
+                                    cwd=tmp, capture_output=True, text=True, check=True)
+            self.assertIn('frame 120:', report.stdout)
+            self.assertTrue((Path(tmp) / 'out/all_frames/frame_00120_row2_pred.png').is_file())
+
 if __name__ == '__main__':
     unittest.main()

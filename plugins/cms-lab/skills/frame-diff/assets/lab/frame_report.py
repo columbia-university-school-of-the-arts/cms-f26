@@ -8,8 +8,8 @@ Usage:
     python3 frame_report.py --explain          # print the definitions below
 
 For each frame number (the number mpv shows, and the CSV's `frame` column) it
-saves the three panels as PNGs in <video>_frames/ and prints what the encoder
-did with that frame:
+saves every panel as a PNG in <video>_frames/, named by row and panel, and
+prints what the encoder did with that frame:
 
   bytes stored   from the CSV, and how that compares with the clip's median
   copied         share of pixels the encoder only copied: the frame's own data
@@ -63,13 +63,17 @@ prediction disappears and only the residual is left. Drawn blocks are
 predicted from their own frame, so they come out close to whole; where their
 neighbours were copied blocks, the guess starts from gray and the block comes
 out partly wrong. The "sent" panels therefore show the
-residuals and the drawn blocks. The motion-vector panel shows the copies.
+residuals and the drawn blocks. The motion-vector panel shows the copies. The
+prediction panel is the decoded frame minus what was sent: the decoder's guess,
+before the residual was added (exact for copied blocks, apart from H.264's
+smoothing of block edges after the residual is added).
 Motion vectors are the encoder's choice of the cheapest block to copy, not a
 measurement of how things moved: on flat areas many blocks match equally well,
 and the arrows can point anywhere.
 """
 import argparse
 import csv
+import json
 import os
 import subprocess
 import sys
@@ -80,9 +84,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-HEADER_H = 84      # must match framediff.py
-TIMELINE_H = 320
-SIDES = ["left", "middle", "right"]
+SINGLE_ROW = {"header_h": 84, "timeline_h": 320,      # framediff.py's layout when
+              "sources": [["dec", "heat", "mv"]]}     # no .json was written beside it
 
 
 def size_of(path):
@@ -126,8 +129,12 @@ def main():
     sizes = [int(r["bytes"]) for r in rows]
     median = float(np.median(sizes[1:] or sizes))
 
+    layout_path = os.path.splitext(args.video)[0] + ".json"
+    layout = json.load(open(layout_path)) if os.path.exists(layout_path) else SINGLE_ROW
     w, h = size_of(args.video)
-    pw, ph = w // 3, h - HEADER_H - TIMELINE_H
+    header_h, sources = layout["header_h"], layout["sources"]
+    pw = w // 3
+    ph = layout.get("panel_h", h - header_h - layout["timeline_h"])
     outdir = os.path.splitext(args.video)[0] + "_frames"
     os.makedirs(outdir, exist_ok=True)
 
@@ -135,9 +142,12 @@ def main():
         if not 0 <= n < len(rows):
             raise SystemExit(f"frame {n} is outside 0 to {len(rows) - 1}")
         img = grab(args.video, n, w, h)
-        for i, side in enumerate(SIDES):
-            panel = img[HEADER_H:HEADER_H + ph, i * pw:(i + 1) * pw]
-            plt.imsave(os.path.join(outdir, f"frame_{n:05d}_{side}.png"), panel)
+        for r, row in enumerate(sources):
+            y = r * (header_h + ph) + header_h
+            for i, name in enumerate(row):
+                panel = img[y:y + ph, i * pw:(i + 1) * pw]
+                tag = f"row{r + 1}_{name}" if len(sources) > 1 else name
+                plt.imsave(os.path.join(outdir, f"frame_{n:05d}_{tag}.png"), panel)
         r = rows[n]
         b, copied = int(r["bytes"]), float(r["copied_pct"])
         print(f"frame {n}: {b:,} bytes stored ({b / median:.1f}x the clip's median "
