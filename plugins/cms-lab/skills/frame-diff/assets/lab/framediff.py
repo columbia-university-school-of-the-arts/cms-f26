@@ -224,7 +224,7 @@ def main():
     plot_w = total_w - AX_LEFT_PX - AX_RIGHT_PX
     thr = args.threshold
     fc = f"""
-[0:v]format=gbrp,scale={pw}:{ph},split=5[a][b][c][d][e];
+[0:v]scale={pw}:{ph},format=gbrp,split=5[a][b][c][d][e];
 [b]tblend=all_mode=difference,format=gray,split=2[d1][d2];
 [d1]lut=c0='if(gt(val,{thr}),255,0)',format=gbrp[mask];
 [d2]lut=c0='if(gt(val,{thr}),0,255)',format=gbrp[inv];

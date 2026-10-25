@@ -159,6 +159,14 @@ class FrameDiffTest(unittest.TestCase):
                                     '-show_entries', 'stream=nb_read_packets', '-of', 'csv=p=0', str(out)],
                                    capture_output=True, text=True, check=True)
             self.assertEqual(abs(int(probe.stdout.strip()) - 210) <= 1, True)
+            # The panels keep their colour: the test pattern's bars are saturated,
+            # so a grey render has R, G and B equal at every pixel
+            raw = subprocess.run(['ffmpeg', '-v', 'error', '-ss', '2', '-i', str(out), '-frames:v', '1',
+                                  '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'],
+                                 capture_output=True, check=True).stdout
+            frame = np.frombuffer(raw, np.uint8).reshape(744, 1920, 3).astype(int)
+            spread = (frame.max(axis=2) - frame.min(axis=2))[64:424, :640]
+            self.assertGreater(spread.mean(), 60)
 
 if __name__ == '__main__':
     unittest.main()
