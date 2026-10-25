@@ -26,8 +26,9 @@ Panels (--view picks which, in rows of three):
   --view amplified   decoded | sent, amplified | motion vectors
   --view both        decoded + motion vectors | sent, amplified | sent per pixel
   --view prediction  prediction | + sent, amplified | = decoded
-  --view all         previous frame | decoded + motion vectors | sent per pixel
-                     above prediction | + sent, amplified | = decoded
+  --view all         previous frame (n-1) | decoded + motion vectors (n) |
+                     sent per pixel (n), above prediction (n) |
+                     + sent, amplified (n) | = decoded frame (n)
 
 Timeline: bytes the encoder stored for each frame, and the mean change in
 each colour channel, with a playhead that follows the video.
@@ -79,8 +80,11 @@ VIEWS = {
     "prediction": [ROW_PREDICTION],
     # Read top left to bottom right: pieces of the previous frame, moved by the
     # motion vectors, make the prediction; what was sent is added to it.
-    "all": [[("prev", "previous frame"), ("mv", "decoded + motion vectors"),
-             ("heat", "sent per pixel")], ROW_PREDICTION],
+    # This is the one view that shows two frames, so its labels say which.
+    "all": [[("prev", "previous frame (n\u22121)"), ("mv", "decoded + motion vectors (n)"),
+             ("heat", "sent per pixel (n)")],
+            [("pred", "prediction (n)"), ("amp", "+ sent, amplified {gain}x (n)"),
+             ("dec", "= decoded frame (n)")]],
 }
 PIPED = ["amp", "heat", "pred", "prev"]   # panels computed in Python and piped, in this order
 HEAT_MAX = 64          # levels from gray (0-255) that reach the top of the heat scale
@@ -283,9 +287,10 @@ def draw_header(path, panel_w, labels):
     for i, text in enumerate(labels):
         fig.text((i + 0.5) / len(labels), 0.08, text, ha="center", va="bottom",
                  color=FG, fontsize=22, family="sans-serif")
-    if "sent per pixel" in labels:
+    heat = [i for i, text in enumerate(labels) if text.startswith("sent per pixel")]
+    if heat:
         bar_w = 260 / total_w
-        cx = (labels.index("sent per pixel") + 0.5) / len(labels)
+        cx = (heat[0] + 0.5) / len(labels)
         ax = fig.add_axes([cx - bar_w / 2, 0.62, bar_w, 0.10])
         index, colours = heat_tables()
         ax.imshow(colours[np.newaxis, :, :], aspect="auto", extent=(0, 255, 0, 1))
@@ -465,7 +470,8 @@ def main():
         k += 1
         g.append(f"color=c=white:s=3x{TIMELINE_H}:r={fps:.6f}:d={1 / fps:.6f},format=yuva420p[ph];")
         g.append(f"[c{k}][ph]overlay=x='{AX_LEFT_PX}+min(t/{duration:.6f}\\,1)*{plot_w}':"
-                 f"y={tl_y}:eval=frame:eof_action=repeat,format=yuv420p[out]")
+                 f"y={tl_y}:eval=frame:eof_action=repeat"
+                 ",format=yuv420p[out]")
         fc = "\n".join(g)
 
         rate = f"{fps:.6f}"
