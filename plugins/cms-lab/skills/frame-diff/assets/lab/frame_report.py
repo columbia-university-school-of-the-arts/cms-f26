@@ -33,14 +33,17 @@ Nothing is removed from the previous frame; each block of the new frame is
 either copied or drawn.
 
 Prediction. For each block, the decoder first makes a guess at it, its
-prediction, from pixels it has already decoded. The encoder makes
-the same guess by the same rules, so the guess itself is never stored. What
-is stored is which guess to make, and how far the guess was wrong.
+prediction, from pixels it has already decoded. The encoder contains the same
+decoder and makes the same guess by the same rules, so the guess itself is
+never stored. What is stored is which guess to make, and how far the guess
+was wrong. Prediction is a procedure the decoder runs, not data in the file:
+the picture exists only once the decoder runs it over the previous frame.
 
   Copied (inter prediction). The guess is a block from the previous frame.
   A motion vector says where: an offset such as "5 1/4 pixels left, 2 up",
   in quarter pixels. A block that did not move is a copy with a vector of
-  zero.
+  zero. The vector is stored in this frame's data and points back into the
+  frame before.
 
   Drawn (intra prediction). The guess is built from the pixels already
   decoded just above and to the left of the block, in the same frame. The
@@ -52,25 +55,72 @@ The decoder adds it to the guess. A block whose guess is close enough gets no
 residual at all (a "skip" block) and costs almost nothing.
 
 Why copying is cheap. Describing a block's 256 pixels in three channels
-typically costs hundreds of bits even after compression. A motion vector is two small
-numbers, stored as its difference from the neighbouring blocks' vectors, so
-when a whole region moves together, as in a camera pan, each vector costs a
-few bits. A residual describes only how a copy differs from the real block,
-which is usually small and smooth, and compresses far better than the block.
+typically costs hundreds of bits even after compression. A motion vector is
+two small numbers, stored as its difference from the neighbouring blocks'
+vectors, so when a whole region moves together, as in a camera pan, each
+vector costs a few bits. A residual describes only how a copy differs from
+the real block, which is usually small and smooth, and compresses far better
+than the block.
 
-What the panels show. framediff.py decodes each P-frame against a flat gray
-frame instead of the frame before it. Copied blocks then copy gray, so their
+Bytes. The last stage, the entropy coder, also predicts: it estimates how
+likely each next bit is from the bits around it, and spends fewer bits on
+what it expected. The "KB stored" numbers come out of that stage. No panel
+shows it.
+
+Motion vectors are the encoder's choice of the cheapest block to copy, not a
+measurement of how things moved: on flat areas many blocks match equally
+well, and the arrows can point anywhere.
+
+
+WHAT THE PANELS SHOW
+
+The encode. framediff.py makes its own H.264 encode of the clip: one flat
+gray keyframe, then every frame of the clip as a P-frame, with no B-frames
+and no new keyframes at cuts. It is a controlled copy, one encoder at one
+setting (--crf), not the encode the clip was downloaded in.
+
+The gray reference. Each P-frame is also decoded against the gray keyframe
+instead of the frame before it. Copied blocks then copy gray, so their
 prediction disappears and only the residual is left. Drawn blocks are
 predicted from their own frame, so they come out close to whole; where their
 neighbours were copied blocks, the guess starts from gray and the block comes
-out partly wrong. The "stored" panels therefore show the
-residuals and the drawn blocks. The motion-vector panel shows the copies. The
-prediction panel is the decoded frame minus what was stored: the decoder's guess,
-before the residual was added (exact for copied blocks, apart from H.264's
-smoothing of block edges after the residual is added).
-Motion vectors are the encoder's choice of the cheapest block to copy, not a
-measurement of how things moved: on flat areas many blocks match equally well,
-and the arrows can point anywhere.
+out partly wrong. What is left is what the frame itself stored: its
+residuals and its drawn blocks.
+
+  decoded video      the encode, as a viewer sees it.
+  motion vectors     the encoder's arrows, drawn on the decoded frame (n),
+                     each pointing back to where its block was copied from in
+                     frame n-1. At a cut there are almost none: nothing in the
+                     old shot was worth copying.
+  stored per pixel   a heat map of what the frame stored: black where the
+                     encoder only copied, brighter the further the frame's own
+                     data moves a pixel from gray, on a log scale so that
+                     corrections of 1 or 2 levels show beside whole redrawn
+                     blocks. Brightness is not a byte count: a drawn block
+                     whose colours happen to be near gray looks dark.
+  stored, amplified  the same data in colour, its distance from gray
+                     multiplied by --gain (default 4). In a typical frame most
+                     pixels sit within a few levels of gray, which looks flat;
+                     4x makes a 3-level correction show as 12. Large changes,
+                     such as a block redrawn at a cut, clip to white or black.
+  prediction         the decoded frame minus what was stored: the decoder's
+                     guess before the residual is added. Close to exact for
+                     copied blocks (H.264 smooths block edges after adding the
+                     residual, which the subtraction cannot undo). For drawn
+                     blocks it shows mostly gray, since nothing was copied.
+  previous frame     the decoded frame n-1, which copied blocks come from. For
+                     frame 0 it is the gray keyframe.
+
+--view all is the one view that shows two frames, so its labels say which:
+previous frame (n-1) on the top left, and (n) on the rest. Read it top left
+to bottom right as the decoder's steps: pieces of the previous frame, moved
+by the motion vectors, make the prediction; what was stored is added to it;
+the result is the decoded frame.
+
+The words. "Stored" is what the file holds for a frame beyond a copy of the
+previous one. Codecs describe the same data as sent by the encoder and
+received by the decoder, the language of transmission; in a file it is
+stored, and the timeline measures it in bytes stored.
 """
 import argparse
 import csv
@@ -85,8 +135,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-SINGLE_ROW = {"header_h": 84, "timeline_h": 320,      # framediff.py's layout when
-              "sources": [["dec", "heat", "mv"]]}     # no .json was written beside it
+SINGLE_ROW = {"header_h": 84, "timeline_h": 320,      # the layout of renders made before
+              "sources": [["dec", "heat", "mv"]]}     # framediff.py wrote a .json beside them
 
 
 def size_of(path):

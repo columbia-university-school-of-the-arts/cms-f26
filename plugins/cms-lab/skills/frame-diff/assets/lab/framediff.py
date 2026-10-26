@@ -11,9 +11,11 @@ it (corrections, and blocks drawn from scratch); copied blocks copy gray.
 Panels (--view picks which, in rows of three):
 
   decoded video     the encode, as a viewer sees it
-  motion vectors    the encoder's own arrows: "copy this block from there"
+  motion vectors    the encoder's own arrows: "copy this block from there",
+                    stored in this frame and pointing back into the one before
   stored, amplified what the frame stored, in colour, its distance from gray
-                    multiplied by --gain
+                    multiplied by --gain (default 4: most of it sits within a
+                    few levels of gray and would look flat)
   stored per pixel  the same as a heat map: black where the encoder only
                     copied, brighter the more it stored, on a log scale
   prediction        what the decoder built before adding what was stored: the
