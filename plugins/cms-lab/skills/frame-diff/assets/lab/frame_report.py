@@ -14,10 +14,11 @@ prints what the encoder did with that frame:
   bytes stored   from the CSV, and how that compares with the clip's median
   copied         share of pixels the encoder only copied: the frame's own data
                  moves them less than 6 levels (of 255) from the gray reference
-  sent           the rest: corrections, and blocks drawn from scratch
+  corrected or   the rest: blocks the frame's stored data corrects, and
+  redrawn        blocks drawn from scratch
 
 "Copied" counts a pixel whose correction is very small as copied too, so it
-is an upper bound on what the encoder sent nothing for.
+is an upper bound on what the encoder stored nothing for.
 
 Needs ffmpeg on PATH, and: pip install numpy matplotlib
 
@@ -62,9 +63,9 @@ frame instead of the frame before it. Copied blocks then copy gray, so their
 prediction disappears and only the residual is left. Drawn blocks are
 predicted from their own frame, so they come out close to whole; where their
 neighbours were copied blocks, the guess starts from gray and the block comes
-out partly wrong. The "sent" panels therefore show the
+out partly wrong. The "stored" panels therefore show the
 residuals and the drawn blocks. The motion-vector panel shows the copies. The
-prediction panel is the decoded frame minus what was sent: the decoder's guess,
+prediction panel is the decoded frame minus what was stored: the decoder's guess,
 before the residual was added (exact for copied blocks, apart from H.264's
 smoothing of block edges after the residual is added).
 Motion vectors are the encoder's choice of the cheapest block to copy, not a
@@ -152,7 +153,7 @@ def main():
         b, copied = int(r["bytes"]), float(r["copied_pct"])
         print(f"frame {n}: {b:,} bytes stored ({b / median:.1f}x the clip's median "
               f"of {median:,.0f}), t={float(r['time_s']):.2f}s; "
-              f"{copied:.0f}% copied, {100 - copied:.0f}% sent")
+              f"{copied:.0f}% copied, {100 - copied:.0f}% corrected or redrawn")
     print(f"panels saved in {outdir}/", file=sys.stderr)
 
 

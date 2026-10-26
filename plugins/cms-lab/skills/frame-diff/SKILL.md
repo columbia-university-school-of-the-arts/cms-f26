@@ -1,6 +1,6 @@
 ---
 name: frame-diff
-description: "Show what a video encoder stores for each frame and how the decoder rebuilds it: framediff.py re-encodes the student's clip as P-frames and renders labeled panels (decoded video, motion vectors, what each frame sent, the decoder's prediction, the previous frame) over a timeline of bytes stored per frame, then opens the result in mpv to step forward and back one frame at a time. frame_report.py measures single frames and explains the terms. Works in ~/cms-lab/frame-diff, not in a repository."
+description: "Show what a video encoder stores for each frame and how the decoder rebuilds it: framediff.py re-encodes the student's clip as P-frames and renders labeled panels (decoded video, motion vectors, what each frame stores, the decoder's prediction, the previous frame) over a timeline of bytes stored per frame, then opens the result in mpv to step forward and back one frame at a time. frame_report.py measures single frames and explains the terms. Works in ~/cms-lab/frame-diff, not in a repository."
 ---
 
 # Most of a frame is the last frame
@@ -55,30 +55,30 @@ new keyframes at cuts. The student's download had its own encoder and
 settings; this is a controlled copy, so what they see is one encoder's
 choices, made visible. Each P-frame is decoded twice: normally, and against
 the gray keyframe instead of the frame before it. Blocks the encoder only
-copied then copy gray, so what is left is what the frame itself sent.
+copied then copy gray, so what is left is what the frame itself stored.
 
 | Panel | What it shows |
 | --- | --- |
 | decoded video | the encode, as a viewer sees it |
 | motion vectors | the encoder's arrows over the decoded video: "copy this block from there". They are stored in frame n's data, and each points back into frame n−1, to where its block was copied from |
-| sent per pixel | a heat map of what the frame sent: black where the encoder only copied, brighter the more it sent, on a log scale |
-| sent, amplified | the same data in colour, its distance from gray multiplied by `--gain` (default 4) |
-| prediction | what the decoder built before adding what was sent: the decoded frame minus what was sent |
+| stored per pixel | a heat map of what the frame stored: black where the encoder only copied, brighter the more it stored, on a log scale |
+| stored, amplified | the same data in colour, its distance from gray multiplied by `--gain` (default 4) |
+| prediction | what the decoder built before adding what was stored: the decoded frame minus what was stored |
 | previous frame | the decoded frame the prediction copies from (for frame 0, the gray keyframe) |
 
 `--view` picks the panels:
 
 | `--view` | Panels |
 | --- | --- |
-| `heat` | decoded video, sent per pixel, motion vectors |
-| `amplified` | decoded video, sent amplified, motion vectors |
-| `both` | decoded + motion vectors, sent amplified, sent per pixel |
-| `prediction` | prediction, + sent amplified, = decoded video |
-| `all` (default) | previous frame (n−1), decoded (n) + motion vectors (from n−1), sent per pixel (n), above prediction (n), + sent amplified (n), = decoded frame (n) |
+| `heat` | decoded video, stored per pixel, motion vectors |
+| `amplified` | decoded video, stored amplified, motion vectors |
+| `both` | decoded + motion vectors, stored amplified, stored per pixel |
+| `prediction` | prediction, + stored amplified, = decoded video |
+| `all` (default) | previous frame (n−1), decoded (n) + motion vectors (from n−1), stored per pixel (n), above prediction (n), + stored amplified (n), = decoded frame (n) |
 
 `all` reads top left to bottom right as the decoder's steps: pieces of the
 previous frame, moved by the motion vectors, make the prediction; what was
-sent is added to it; the result is the decoded frame. It is the only view
+stored is added to it; the result is the decoded frame. It is the only view
 that shows two frames, which is why its labels say which. It is the default;
 its video is 1920x1208, so it may need full screen, and `--view heat` gives a
 single row when a smaller video suits better.
@@ -103,14 +103,14 @@ Mandelbrot fractal, and processes it:
 .venv/bin/python framediff.py --make-test -o out/framediff_test_framediff.mp4 --play
 ```
 
-First ask the student what "sent per pixel" will show during the test
+First ask the student what "stored per pixel" will show during the test
 pattern, and what it will show at the cut. mpv opens when it finishes (Step 4). At
 2 s the heat map is almost all black: the bars do not move, so the encoder
 copies them and sends only the moving line and the checkerboard. At frame 120
 (4 s) the heat map lights up across the whole frame and the top strip spikes;
 the prediction is nearly empty gray, apart from one blue block the encoder
 copied from the colour bars anyway, which shows the wrong colour until what
-was sent corrects it. If none of this appears, something is wrong with the
+was stored corrects it. If none of this appears, something is wrong with the
 install; show the error rather than continuing.
 
 ## Step 2: the student's clip
@@ -183,7 +183,7 @@ When the student finds a frame worth discussing, measure it:
 ```
 
 For each frame it prints the bytes stored against the clip's median and the
-share of the frame copied or sent, and saves every panel as a PNG in
+share of the frame copied, or corrected and redrawn, and saves every panel as a PNG in
 `out/CLIP_excerpt_framediff_frames/` (named by row and panel, such as
 `frame_00120_row2_pred.png`) for the student's notes or slides. "Copied"
 counts pixels the frame's own data moves less than 6 levels from gray, so a
@@ -193,10 +193,10 @@ Things to look for together:
 
 - **The prediction.** Step across a fast movement and compare the previous
   frame, the prediction and the decoded frame. Where the prediction is a smear,
-  nothing in the previous frame matched, and what was sent fills it in.
+  nothing in the previous frame matched, and what was stored fills it in.
 - **Change the encoder ignored.** A background can visibly shift in the
   decoded video while the heat map stays black there. The encoder judged a
-  copy close enough and sent nothing; the decoded picture is the copy.
+  copy close enough and stored nothing for it; the decoded picture is the copy.
   Raising `--crf` makes this happen more often.
 - **Cuts and flashes.** A spike in the top strip, a heat map lit across the
   frame, and an empty prediction: there was nothing to copy from.

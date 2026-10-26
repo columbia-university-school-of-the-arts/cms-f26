@@ -6,7 +6,7 @@ Source (URL or description):
 ## Prediction
 
 <!-- Before the first run: which moments will cost the encoder the most bytes?
-Where will "sent per pixel" stay black while the picture plainly changes? -->
+Where will "stored per pixel" stay black while the picture plainly changes? -->
 
 ## Runs
 

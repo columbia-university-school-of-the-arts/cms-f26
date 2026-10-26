@@ -5,30 +5,30 @@ framediff.py: show what a video encoder actually stores, frame by frame.
 The script re-encodes the clip with H.264 as a flat gray keyframe followed
 only by P-frames (every frame of the clip becomes a P-frame). It then decodes
 each P-frame twice: normally, and against the gray keyframe instead of the
-frame before it. What a frame shows against gray is what the encoder sent for
+frame before it. What a frame shows against gray is what the encoder stored for
 it (corrections, and blocks drawn from scratch); copied blocks copy gray.
 
 Panels (--view picks which, in rows of three):
 
   decoded video     the encode, as a viewer sees it
   motion vectors    the encoder's own arrows: "copy this block from there"
-  sent, amplified   what the frame sent, in colour, its distance from gray
+  stored, amplified what the frame stored, in colour, its distance from gray
                     multiplied by --gain
-  sent per pixel    the same as a heat map: black where the encoder only
-                    copied, brighter the more it sent, on a log scale
-  prediction        what the decoder built before adding what was sent: the
-                    decoded frame minus what was sent (exact for copied blocks
+  stored per pixel  the same as a heat map: black where the encoder only
+                    copied, brighter the more it stored, on a log scale
+  prediction        what the decoder built before adding what was stored: the
+                    decoded frame minus what was stored (exact for copied blocks
                     up to H.264's edge smoothing)
   previous frame    the decoded frame before this one, which the prediction
                     is copied from (for frame 0, the gray keyframe)
 
-  --view heat        decoded | sent per pixel | motion vectors
-  --view amplified   decoded | sent, amplified | motion vectors
-  --view both        decoded + motion vectors | sent, amplified | sent per pixel
-  --view prediction  prediction | + sent, amplified | = decoded
+  --view heat        decoded | stored per pixel | motion vectors
+  --view amplified   decoded | stored, amplified | motion vectors
+  --view both        decoded + motion vectors | stored, amplified | stored per pixel
+  --view prediction  prediction | + stored, amplified | = decoded
   --view all         previous frame (n-1) | decoded (n) + motion vectors (from n-1) |
-                     sent per pixel (n), above prediction (n) |
-                     + sent, amplified (n) | = decoded frame (n)   (default)
+                     stored per pixel (n), above prediction (n) |
+                     + stored, amplified (n) | = decoded frame (n)   (default)
 
 Timeline: bytes the encoder stored for each frame, then the mean change in
 R, G and B, each in its own strip on one shared scale, with a playhead that
@@ -72,25 +72,25 @@ FG = "#d8d8d8"
 CHANNEL_COLORS = {"R": "#ff4d4d", "G": "#3ddc84", "B": "#4d8dff"}
 BYTES_COLOR = "#ffcc33"
 # --view: rows of panels, left to right. Each panel is (source, label).
-# Sources: dec (decoded), mv (motion vectors on decoded), amp (sent, amplified),
-# heat (sent per pixel), pred (prediction), prev (previous decoded frame).
+# Sources: dec (decoded), mv (motion vectors on decoded), amp (stored, amplified),
+# heat (stored per pixel), pred (prediction), prev (previous decoded frame).
 # Labels may use {gain}.
-ROW_BOTH = [("mv", "decoded + motion vectors"), ("amp", "sent, amplified {gain}x"),
-            ("heat", "sent per pixel")]
-ROW_PREDICTION = [("pred", "prediction"), ("amp", "+ sent, amplified {gain}x"),
+ROW_BOTH = [("mv", "decoded + motion vectors"), ("amp", "stored, amplified {gain}x"),
+            ("heat", "stored per pixel")]
+ROW_PREDICTION = [("pred", "prediction"), ("amp", "+ stored, amplified {gain}x"),
                   ("dec", "= decoded video")]
 VIEWS = {
-    "heat": [[("dec", "decoded video"), ("heat", "sent per pixel"), ("mv", "motion vectors")]],
-    "amplified": [[("dec", "decoded video"), ("amp", "sent, amplified {gain}x"),
+    "heat": [[("dec", "decoded video"), ("heat", "stored per pixel"), ("mv", "motion vectors")]],
+    "amplified": [[("dec", "decoded video"), ("amp", "stored, amplified {gain}x"),
                    ("mv", "motion vectors")]],
     "both": [ROW_BOTH],
     "prediction": [ROW_PREDICTION],
     # Read top left to bottom right: pieces of the previous frame, moved by the
-    # motion vectors, make the prediction; what was sent is added to it.
+    # motion vectors, make the prediction; what was stored is added to it.
     # This is the one view that shows two frames, so its labels say which.
     "all": [[("prev", "previous frame (n\u22121)"), ("mv", "decoded (n) + motion vectors (from n\u22121)"),
-             ("heat", "sent per pixel (n)")],
-            [("pred", "prediction (n)"), ("amp", "+ sent, amplified {gain}x (n)"),
+             ("heat", "stored per pixel (n)")],
+            [("pred", "prediction (n)"), ("amp", "+ stored, amplified {gain}x (n)"),
              ("dec", "= decoded frame (n)")]],
 }
 PIPED = ["amp", "heat", "pred", "prev"]   # panels computed in Python and piped, in this order
@@ -258,22 +258,22 @@ def stored_frames(enc, pairs, w, h, fps, needed, gain):
             break
         g = np.frombuffer(gray, np.uint8).reshape(h, w, 3).astype(np.int16)
         p = np.frombuffer(frame, np.uint8).reshape(h, w, 3).astype(np.int16)
-        sent = p - g
+        stored = p - g
         if dec_proc:
             d = dec_proc.stdout.read(fb)
             dec = np.frombuffer(d if len(d) == fb else bytes(fb), np.uint8).reshape(h, w, 3)
-        dev = np.minimum(np.abs(sent).max(axis=2), 255).astype(np.uint8)
+        dev = np.minimum(np.abs(stored).max(axis=2), 255).astype(np.uint8)
         copied = float((dev <= COPY_TOL).mean() * 100)
         parts = []
         for name in PIPED:
             if name not in needed:
                 continue
             if name == "amp":
-                parts.append(np.clip(sent * gain + 128, 0, 255).astype(np.uint8))
+                parts.append(np.clip(stored * gain + 128, 0, 255).astype(np.uint8))
             elif name == "heat":
                 parts.append(colours[index[dev]])
             elif name == "pred":
-                parts.append(np.clip(dec.astype(np.int16) - sent, 0, 255).astype(np.uint8))
+                parts.append(np.clip(dec.astype(np.int16) - stored, 0, 255).astype(np.uint8))
             else:
                 parts.append(prev)
         if dec_proc:
@@ -298,7 +298,7 @@ def draw_header(path, panel_w, labels):
         # A long label shrinks until it leaves a margin inside its own panel
         while label.get_window_extent(renderer).width > 0.88 * panel_w and label.get_fontsize() > 12:
             label.set_fontsize(label.get_fontsize() - 1)
-    heat = [i for i, text in enumerate(labels) if text.startswith("sent per pixel")]
+    heat = [i for i, text in enumerate(labels) if text.startswith("stored per pixel")]
     if heat:
         bar_w = 260 / total_w
         cx = (heat[0] + 0.5) / len(labels)
@@ -313,7 +313,7 @@ def draw_header(path, panel_w, labels):
         ax.tick_params(length=2, pad=1, colors=FG)
         for spine in ax.spines.values():
             spine.set_visible(False)
-        fig.text(cx + bar_w / 2 + 6 / total_w, 0.67, "levels sent", ha="left",
+        fig.text(cx + bar_w / 2 + 6 / total_w, 0.67, "levels stored", ha="left",
                  va="center", color=FG, fontsize=9)
     fig.savefig(path, dpi=100, facecolor=BG)
     plt.close(fig)
@@ -423,7 +423,7 @@ def main():
                     help="generate framediff_test.mp4 (pattern + fractal) and process it")
     ap.add_argument("--crf", type=int, default=23,
                     help="H.264 quality, 0-51: higher sends less new data, so more of "
-                         "the 'sent per pixel' panel stays black (default 23)")
+                         "the 'stored per pixel' panel stays black (default 23)")
     ap.add_argument("--view", choices=sorted(VIEWS), default="all",
                     help="which panels: all (default, two rows), heat, amplified, both, "
                          "or prediction; see the top of this file")
