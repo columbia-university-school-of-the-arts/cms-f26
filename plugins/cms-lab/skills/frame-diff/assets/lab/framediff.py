@@ -26,7 +26,7 @@ Panels (--view picks which, in rows of three):
   --view amplified   decoded | sent, amplified | motion vectors
   --view both        decoded + motion vectors | sent, amplified | sent per pixel
   --view prediction  prediction | + sent, amplified | = decoded
-  --view all         previous frame (n-1) | decoded + motion vectors (n) |
+  --view all         previous frame (n-1) | decoded (n) + motion vectors (from n-1) |
                      sent per pixel (n), above prediction (n) |
                      + sent, amplified (n) | = decoded frame (n)   (default)
 
@@ -88,7 +88,7 @@ VIEWS = {
     # Read top left to bottom right: pieces of the previous frame, moved by the
     # motion vectors, make the prediction; what was sent is added to it.
     # This is the one view that shows two frames, so its labels say which.
-    "all": [[("prev", "previous frame (n\u22121)"), ("mv", "decoded + motion vectors (n)"),
+    "all": [[("prev", "previous frame (n\u22121)"), ("mv", "decoded (n) + motion vectors (from n\u22121)"),
              ("heat", "sent per pixel (n)")],
             [("pred", "prediction (n)"), ("amp", "+ sent, amplified {gain}x (n)"),
              ("dec", "= decoded frame (n)")]],
@@ -291,9 +291,13 @@ def draw_header(path, panel_w, labels):
     total_w = panel_w * len(labels)
     fig = plt.figure(figsize=(total_w / 100, HEADER_H / 100), dpi=100)
     fig.patch.set_facecolor(BG)
+    renderer = fig.canvas.get_renderer()
     for i, text in enumerate(labels):
-        fig.text((i + 0.5) / len(labels), 0.08, text, ha="center", va="bottom",
-                 color=FG, fontsize=22, family="sans-serif")
+        label = fig.text((i + 0.5) / len(labels), 0.08, text, ha="center", va="bottom",
+                         color=FG, fontsize=22, family="sans-serif")
+        # A long label shrinks until it leaves a margin inside its own panel
+        while label.get_window_extent(renderer).width > 0.88 * panel_w and label.get_fontsize() > 12:
+            label.set_fontsize(label.get_fontsize() - 1)
     heat = [i for i, text in enumerate(labels) if text.startswith("sent per pixel")]
     if heat:
         bar_w = 260 / total_w

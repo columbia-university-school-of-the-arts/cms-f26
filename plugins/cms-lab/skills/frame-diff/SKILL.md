@@ -60,7 +60,7 @@ copied then copy gray, so what is left is what the frame itself sent.
 | Panel | What it shows |
 | --- | --- |
 | decoded video | the encode, as a viewer sees it |
-| motion vectors | the encoder's arrows over the decoded video: "copy this block from there" |
+| motion vectors | the encoder's arrows over the decoded video: "copy this block from there". They are stored in frame n's data, and each points back into frame n−1, to where its block was copied from |
 | sent per pixel | a heat map of what the frame sent: black where the encoder only copied, brighter the more it sent, on a log scale |
 | sent, amplified | the same data in colour, its distance from gray multiplied by `--gain` (default 4) |
 | prediction | what the decoder built before adding what was sent: the decoded frame minus what was sent |
@@ -74,7 +74,7 @@ copied then copy gray, so what is left is what the frame itself sent.
 | `amplified` | decoded video, sent amplified, motion vectors |
 | `both` | decoded + motion vectors, sent amplified, sent per pixel |
 | `prediction` | prediction, + sent amplified, = decoded video |
-| `all` (default) | previous frame (n−1), decoded + motion vectors (n), sent per pixel (n), above prediction (n), + sent amplified (n), = decoded frame (n) |
+| `all` (default) | previous frame (n−1), decoded (n) + motion vectors (from n−1), sent per pixel (n), above prediction (n), + sent amplified (n), = decoded frame (n) |
 
 `all` reads top left to bottom right as the decoder's steps: pieces of the
 previous frame, moved by the motion vectors, make the prediction; what was
