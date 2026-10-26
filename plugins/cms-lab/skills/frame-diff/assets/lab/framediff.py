@@ -33,8 +33,12 @@ Panels (--view picks which, in rows of three):
 Timeline: bytes the encoder stored for each frame, and the mean change in
 each colour channel, with a playhead that follows the video.
 
+A strip along the bottom holds mpv's frame counter and a reminder of the keys.
+
 Usage:
     python3 framediff.py input.mp4
+    python3 framediff.py input.mp4 --play        # opens the result in mpv when done
+    python3 framediff.py --open input_framediff.mp4   # reopen a render in mpv
     python3 framediff.py input.mov -o out.mp4 --view heat --crf 30
     python3 framediff.py --make-test            # builds and processes a test clip
 
@@ -46,6 +50,7 @@ import argparse
 import csv
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -58,6 +63,7 @@ import matplotlib.pyplot as plt
 
 HEADER_H = 84          # label bar above the panels, in pixels (frame_report.py reads it)
 TIMELINE_H = 320       # timeline strip below the panels, in pixels
+STATUS_H = 44          # strip under the timeline for mpv's frame counter and the keys
 AX_LEFT_PX = 90        # timeline plot margins, in pixels (fixed so the
 AX_RIGHT_PX = 40       # playhead lines up with the plotted data)
 BG = "#000000"
@@ -308,6 +314,53 @@ def draw_header(path, panel_w, labels):
     plt.close(fig)
 
 
+def draw_status(path, total_w):
+    """The strip under the timeline: mpv writes its frame counter at its left,
+    and the keys for stepping through frames sit at its right."""
+    fig = plt.figure(figsize=(total_w / 100, STATUS_H / 100), dpi=100)
+    fig.patch.set_facecolor(BG)
+    fig.text(1 - 20 / total_w, 0.5,
+             "in mpv:   .  next frame      ,  previous frame      space  play / pause      q  quit",
+             ha="right", va="center", color="#9a9a9a", fontsize=13, family="sans-serif")
+    fig.savefig(path, dpi=100, facecolor=BG)
+    plt.close(fig)
+
+
+def mpv_command(video, height):
+    """mpv, paused at the first frame, with the frame counter in the bottom strip.
+    mpv sizes its on-screen text as if the window were 720 pixels high, so the
+    font and margins are worked out from how much of the video the strip is."""
+    strip = STATUS_H / height * 720
+    return ["mpv", "--pause", "--keep-open=yes", "--osd-level=3",
+            "--osd-status-msg=frame ${estimated-frame-number}   ${time-pos/full}",
+            "--osd-align-x=left", "--osd-align-y=bottom",
+            f"--osd-font-size={strip * 0.62:.1f}", f"--osd-margin-y={max(1, round(strip * 0.18))}",
+            f"--osd-margin-x={max(1, round(strip * 0.4))}",
+            "--autofit-larger=90%x90%",   # the two-row render is taller than a laptop screen
+            video]
+
+
+def open_in_mpv(video):
+    """Start mpv on a render in the background, using its layout file for the size."""
+    layout_path = os.path.splitext(video)[0] + ".json"
+    if os.path.exists(layout_path):
+        height = json.load(open(layout_path)).get("height")
+    else:
+        height = None
+    if not height:
+        out = run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                   "stream=height", "-of", "csv=p=0", video], capture_output=True, text=True).stdout
+        height = int(out.strip().split(",")[0])
+    cmd = mpv_command(video, height)
+    if shutil.which("mpv") is None:
+        print("mpv is not installed (brew install mpv, or run /cms-lab:init); open "
+              f"{video} in another player instead", file=sys.stderr)
+        return
+    subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL, start_new_session=True)
+    print(f"opened {video} in mpv", file=sys.stderr)
+
+
 def draw_timeline(path, total_w, times, kbytes, types, change):
     fig = plt.figure(figsize=(total_w / 100, TIMELINE_H / 100), dpi=100)
     fig.patch.set_facecolor(BG)
@@ -362,10 +415,17 @@ def main():
     ap.add_argument("--gain", type=float, default=4,
                     help="for the amplified panel: how many times to boost the "
                          "distance from gray (default 4)")
+    ap.add_argument("--play", action="store_true",
+                    help="open the result in mpv when processing is done")
+    ap.add_argument("--open", metavar="RENDER",
+                    help="open an existing framediff.py output in mpv, without processing")
     ap.add_argument("--min-panel-width", type=int, default=640,
                     help="small sources are scaled up so labels and timeline stay legible")
     args = ap.parse_args()
 
+    if args.open:
+        open_in_mpv(args.open)
+        return
     if args.make_test:
         args.input = args.input or "framediff_test.mp4"
         make_test_clip(args.input)
@@ -418,6 +478,8 @@ def main():
             draw_header(path, pw, row_labels)
         timeline_png = os.path.join(tmp, "timeline.png")
         draw_timeline(timeline_png, total_w, times, kbytes, types, change)
+        status_png = os.path.join(tmp, "status.png")
+        draw_status(status_png, total_w)
 
         duration = max(times[-1], 1e-6)
         plot_w = total_w - AX_LEFT_PX - AX_RIGHT_PX
@@ -451,7 +513,7 @@ def main():
                 taken[name] += 1
             g.append(f"{ins}hstack=inputs=3,pad={total_w}:{row_h}:0:{HEADER_H}:black[row{r}];")
         body = "".join(f"[row{r}]" for r in range(n_rows))
-        height = n_rows * row_h + TIMELINE_H
+        height = n_rows * row_h + TIMELINE_H + STATUS_H
         if n_rows > 1:
             g.append(f"{body}vstack=inputs={n_rows},pad={total_w}:{height}:0:0:black[c0];")
         else:
@@ -468,6 +530,9 @@ def main():
         tl_y = n_rows * row_h
         g.append(f"[{tl_input}:v]format=yuva420p[tl];[c{k}][tl]overlay=0:{tl_y}:eof_action=repeat[c{k + 1}];")
         k += 1
+        g.append(f"[{tl_input + 1}:v]format=yuva420p[st];[c{k}][st]overlay=0:{tl_y + TIMELINE_H}:"
+                 f"eof_action=repeat[c{k + 1}];")
+        k += 1
         g.append(f"color=c=white:s=3x{TIMELINE_H}:r={fps:.6f}:d={1 / fps:.6f},format=yuva420p[ph];")
         g.append(f"[c{k}][ph]overlay=x='{AX_LEFT_PX}+min(t/{duration:.6f}\\,1)*{plot_w}':"
                  f"y={tl_y}:eval=frame:eof_action=repeat"
@@ -481,8 +546,8 @@ def main():
                "-framerate", rate, "-i", "pipe:0"]
         for path in headers:
             cmd += ["-i", path]
-        cmd += ["-i", timeline_png, "-i", src,
-                "-filter_complex", fc, "-map", "[out]", "-map", f"{tl_input + 1}:a?",
+        cmd += ["-i", timeline_png, "-i", status_png, "-i", src,
+                "-filter_complex", fc, "-map", "[out]", "-map", f"{tl_input + 2}:a?",
                 "-r", rate, "-c:v", "libx264", "-crf", "18", "-c:a", "aac",
                 "-shortest", out]
         print("rendering...", file=sys.stderr)
@@ -516,8 +581,14 @@ def main():
     with open(layout_path, "w") as f:
         json.dump({"view": args.view, "gain": args.gain, "crf": args.crf,
                    "panel_w": pw, "panel_h": ph, "header_h": HEADER_H,
-                   "timeline_h": TIMELINE_H, "sources": sources, "labels": labels}, f, indent=1)
+                   "timeline_h": TIMELINE_H, "status_h": STATUS_H, "height": height,
+                   "sources": sources, "labels": labels}, f, indent=1)
     print(f"wrote {out}\nwrote {csv_path}\nwrote {layout_path}", file=sys.stderr)
+    if args.play:
+        open_in_mpv(out)
+    else:
+        print(f"to step through it in mpv:  python3 {os.path.basename(sys.argv[0])} --open {out}",
+              file=sys.stderr)
 
 
 if __name__ == "__main__":

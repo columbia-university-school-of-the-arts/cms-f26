@@ -98,11 +98,11 @@ seconds of a moving test pattern, a hard cut, then three seconds of a zooming
 Mandelbrot fractal, and processes it:
 
 ```sh
-.venv/bin/python framediff.py --make-test -o out/framediff_test_framediff.mp4
+.venv/bin/python framediff.py --make-test -o out/framediff_test_framediff.mp4 --play
 ```
 
 First ask the student what "sent per pixel" will show during the test
-pattern, and what it will show at the cut. Then open the result (Step 4). At
+pattern, and what it will show at the cut. mpv opens when it finishes (Step 4). At
 2 s the heat map is almost all black: the bars do not move, so the encoder
 copies them and sends only the moving line and the checkerboard. At frame 120
 (4 s) the heat map lights up across the whole frame and the top strip spikes;
@@ -134,10 +134,11 @@ while the picture plainly changes, and what a slow camera move will do.
 ## Step 3: run
 
 ```sh
-.venv/bin/python framediff.py media/CLIP_excerpt.mp4 -o out/CLIP_excerpt_framediff.mp4
+.venv/bin/python framediff.py media/CLIP_excerpt.mp4 -o out/CLIP_excerpt_framediff.mp4 --play
 ```
 
-Give a long-running command a timeout of ten minutes, or run it in the
+`--play` opens the result in mpv when processing is done (Step 4). Give a
+long-running command a timeout of ten minutes, or run it in the
 background and check on it; do not let the shell's default time limit kill it
 part way, which leaves a broken MP4. Beside the video the script writes a CSV,
 one row per frame (time, frame type, bytes stored, share copied, mean change
@@ -152,16 +153,20 @@ output under its own name.
 
 ## Step 4: open it in mpv
 
-When the script finishes, open the output in mpv, paused, with the frame
-number on screen. Run it in the background so this session stays free:
+With `--play`, mpv opens when the script finishes: paused on the first frame,
+sized to fit the screen, and in the background, so this session stays free.
+To reopen a render later, or one made without `--play`:
 
 ```sh
-nohup mpv --pause --keep-open=yes --osd-level=3 --osd-status-msg='frame ${estimated-frame-number}   ${time-pos}' out/CLIP_excerpt_framediff.mp4 >/dev/null 2>&1 &
+.venv/bin/python framediff.py --open out/CLIP_excerpt_framediff.mp4
 ```
 
-Tell the student the keys: `.` one frame forward, `,` one frame back, space
-to play or pause, `[` and `]` to slow down or speed up, `q` to quit. The
-frame number on screen is the CSV's `frame` column.
+mpv writes the frame number and time (HH:MM:SS.mmm) in the strip along the
+bottom of the video, where the keys are listed too: `.` one frame forward,
+`,` one frame back, space to play or pause, `[` and `]` to slow down or speed
+up, `q` to quit. The frame number is the CSV's `frame` column. A render from
+version 0.8.0 has no bottom strip, so mpv's counter covers its top-left
+label; render it again.
 
 Inside WSL, mpv opens a window only on Windows 11 (WSLg). If no window
 appears, tell the student to open the file from Windows instead:
