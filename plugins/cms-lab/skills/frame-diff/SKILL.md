@@ -84,8 +84,10 @@ its video is 1920x1208, so it may need full screen, and `--view heat` gives a
 single row when a smaller video suits better.
 
 The timeline's top strip is the bytes stored for each frame; frame 0 has
-nothing to copy from, so it is labelled rather than drawn to scale. The bottom
-strip is the mean change in each colour channel from the frame before.
+nothing to copy from, so it is labelled rather than drawn to scale. Below it,
+R, G and B each have a strip of their own, showing the mean change in that
+channel from the frame before, with the clip's mean at the right. The three
+share one scale, so their heights compare directly.
 
 Before the first run, `frame_report.py --explain` prints these definitions
 (blocks, prediction, motion vectors, residuals, why copying is cheap). Read
@@ -204,8 +206,8 @@ Things to look for together:
 - **Arrows that are not motion.** On flat areas many blocks match equally
   well, so motion vectors can point anywhere. Ask where the arrows follow what
   moves and where they only mark a cheap copy.
-- **Bytes against change.** The two strips mostly rise together, but not
-  always. Ask the student to find a frame where the colour change is large and
+- **Bytes against change.** The bytes strip and the channel strips mostly
+  rise together, but not always. Ask the student to find a frame where the colour change is large and
   the bytes are small, or the reverse, and explain it with the panels.
 
 Have the student note two or three frames worth showing in `experiment.md`

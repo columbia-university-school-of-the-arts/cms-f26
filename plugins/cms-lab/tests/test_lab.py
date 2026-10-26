@@ -167,7 +167,7 @@ class FrameDiffTest(unittest.TestCase):
                                       '-fps_mode', 'passthrough', '-frames:v', '1',
                                       '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'],
                                      capture_output=True, check=True).stdout
-                frame = np.frombuffer(raw, np.uint8).reshape(764 + 44, 1920, 3).astype(int)
+                frame = np.frombuffer(raw, np.uint8).reshape(84 + 360 + 420 + 44, 1920, 3).astype(int)
                 return frame[84:444, col * 640:(col + 1) * 640]
 
             # The decoded panel keeps its colour: saturated bars, R, G and B far apart
@@ -217,7 +217,7 @@ class FrameDiffTest(unittest.TestCase):
             raw = subprocess.run(['ffmpeg', '-v', 'error', '-i', str(out), '-vf', 'select=eq(n\\,60)',
                                   '-fps_mode', 'passthrough', '-frames:v', '1',
                                   '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], capture_output=True, check=True).stdout
-            frame = np.frombuffer(raw, np.uint8).reshape(2 * (84 + 360) + 320 + 44, 1920, 3).astype(int)
+            frame = np.frombuffer(raw, np.uint8).reshape(2 * (84 + 360) + 420 + 44, 1920, 3).astype(int)
             row2 = frame[84 + 360 + 84:84 + 360 + 84 + 360]
             pred, dec = row2[:, :640], row2[:, 1280:]
             # Mid-shot the prediction is nearly the whole decoded frame
@@ -227,7 +227,7 @@ class FrameDiffTest(unittest.TestCase):
             raw = subprocess.run(['ffmpeg', '-v', 'error', '-i', str(out),
                                   '-vf', 'select=between(n\\,119\\,120)', '-fps_mode', 'passthrough',
                                   '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], capture_output=True, check=True).stdout
-            pair = np.frombuffer(raw, np.uint8).reshape(2, 2 * (84 + 360) + 320 + 44, 1920, 3).astype(int)
+            pair = np.frombuffer(raw, np.uint8).reshape(2, 2 * (84 + 360) + 420 + 44, 1920, 3).astype(int)
             prev_120 = pair[1, 84:444, :640]
             dec_119 = pair[0, 84 + 360 + 84:84 + 360 + 84 + 360, 1280:]
             dec_120 = pair[1, 84 + 360 + 84:84 + 360 + 84 + 360, 1280:]
@@ -243,7 +243,7 @@ class FrameDiffTest(unittest.TestCase):
             'framediff', Path(__file__).resolve().parents[1] / 'skills/frame-diff/assets/lab/framediff.py')
         fd = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(fd)
-        for height in (764 + 44, 2 * (84 + 360) + 320 + 44):   # one row, two rows
+        for height in (84 + 360 + 420 + 44, 2 * (84 + 360) + 420 + 44):   # one row, two rows
             cmd = fd.mpv_command('out.mp4', height)
             opt = dict(c[2:].split('=', 1) for c in cmd if c.startswith('--') and '=' in c)
             self.assertEqual((opt['osd-align-x'], opt['osd-align-y']), ('left', 'bottom'))

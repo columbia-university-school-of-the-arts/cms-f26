@@ -30,8 +30,9 @@ Panels (--view picks which, in rows of three):
                      sent per pixel (n), above prediction (n) |
                      + sent, amplified (n) | = decoded frame (n)   (default)
 
-Timeline: bytes the encoder stored for each frame, and the mean change in
-each colour channel, with a playhead that follows the video.
+Timeline: bytes the encoder stored for each frame, then the mean change in
+R, G and B, each in its own strip on one shared scale, with a playhead that
+follows the video.
 
 A strip along the bottom holds mpv's frame counter and a reminder of the keys.
 
@@ -62,7 +63,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 HEADER_H = 84          # label bar above the panels, in pixels (frame_report.py reads it)
-TIMELINE_H = 320       # timeline strip below the panels, in pixels
+TIMELINE_H = 420       # timeline below the panels (bytes, then R, G, B), in pixels
 STATUS_H = 44          # strip under the timeline for mpv's frame counter and the keys
 AX_LEFT_PX = 90        # timeline plot margins, in pixels (fixed so the
 AX_RIGHT_PX = 40       # playhead lines up with the plotted data)
@@ -362,40 +363,50 @@ def open_in_mpv(video):
 
 
 def draw_timeline(path, total_w, times, kbytes, types, change):
+    """Bytes stored per frame on top, then one strip per colour channel. The three
+    channel strips share one scale, so their heights compare directly."""
     fig = plt.figure(figsize=(total_w / 100, TIMELINE_H / 100), dpi=100)
     fig.patch.set_facecolor(BG)
     left = AX_LEFT_PX / total_w
     width = (total_w - AX_LEFT_PX - AX_RIGHT_PX) / total_w
-    ax1 = fig.add_axes([left, 0.52, width, 0.40])               # bytes stored
-    ax2 = fig.add_axes([left, 0.17, width, 0.28], sharex=ax1)   # pixel change
-    for ax in (ax1, ax2):
+    ax_bytes = fig.add_axes([left, 0.63, width, 0.33])
+    channel_axes = [fig.add_axes([left, y0, width, 0.135], sharex=ax_bytes)
+                    for y0 in (0.465, 0.30, 0.135)]             # R, G, B from the top
+    for ax in [ax_bytes] + channel_axes:
         ax.set_facecolor(BG)
         ax.tick_params(colors=FG, labelsize=11)
         for side in ("top", "right"):
             ax.spines[side].set_visible(False)
         for side in ("left", "bottom"):
             ax.spines[side].set_color("#555555")
-    ax1.fill_between(times, kbytes, color=BYTES_COLOR, alpha=0.35, lw=0)
-    ax1.plot(times, kbytes, color=BYTES_COLOR, lw=1.2)
+    ax_bytes.fill_between(times, kbytes, color=BYTES_COLOR, alpha=0.35, lw=0)
+    ax_bytes.plot(times, kbytes, color=BYTES_COLOR, lw=1.2)
     # Frame 0 has nothing to copy from, so it is drawn whole and is far larger
     # than the rest; scale to the others and label it instead of squashing them.
     rest = kbytes[1:] or kbytes
     ymax = max(rest) * 1.15
-    ax1.set_ylim(0, ymax)
+    ax_bytes.set_ylim(0, ymax)
     if kbytes[0] > ymax:
-        ax1.annotate(f"frame 0: {kbytes[0]:.0f} KB", xy=(times[0], ymax),
-                     xytext=(8, -14), textcoords="offset points", color=BYTES_COLOR,
-                     fontsize=11)
-    ax1.set_ylabel("KB stored", color=FG, fontsize=11)
-    plt.setp(ax1.get_xticklabels(), visible=False)
-    lines = [ax2.plot(times, change[:, i], color=CHANNEL_COLORS[ch], lw=1.2,
-                      label=ch)[0] for i, ch in enumerate("RGB")]
-    ax2.set_ylim(bottom=0)
-    ax2.set_ylabel("change %", color=FG, fontsize=11)
-    ax2.set_xlabel("seconds", color=FG, fontsize=11)
-    ax2.legend(handles=lines, loc="upper left", ncol=3, frameon=False,
-               labelcolor=FG, fontsize=10)
-    ax1.set_xlim(times[0], times[-1])
+        ax_bytes.annotate(f"frame 0: {kbytes[0]:.0f} KB", xy=(times[0], ymax),
+                          xytext=(8, -14), textcoords="offset points", color=BYTES_COLOR,
+                          fontsize=11)
+    ax_bytes.set_ylabel("KB stored", color=FG, fontsize=11)
+    top = max(float(change.max()), 1.0) * 1.1
+    for i, (ax, ch) in enumerate(zip(channel_axes, "RGB")):
+        colour = CHANNEL_COLORS[ch]
+        ax.fill_between(times, change[:, i], color=colour, alpha=0.25, lw=0)
+        ax.plot(times, change[:, i], color=colour, lw=1.0)
+        ax.set_ylim(0, top)
+        ax.set_yticks([0, round(top / 2)])
+        ax.set_ylabel(f"{ch} %", color=colour, fontsize=11, rotation=0, ha="right",
+                      va="center")
+        ax.text(1.0, 0.95, f"mean {change[1:, i].mean():.1f}%", transform=ax.transAxes,
+                ha="right", va="top", color=colour, fontsize=10)
+    for ax in [ax_bytes] + channel_axes[:-1]:
+        plt.setp(ax.get_xticklabels(), visible=False)
+    channel_axes[-1].set_xlabel("seconds  (R, G, B: mean change from the frame before, "
+                                "on one shared scale)", color=FG, fontsize=11)
+    ax_bytes.set_xlim(times[0], times[-1])
     fig.savefig(path, dpi=100, facecolor=BG)
     plt.close(fig)
 
