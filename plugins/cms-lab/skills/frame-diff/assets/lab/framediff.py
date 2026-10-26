@@ -5,36 +5,43 @@ framediff.py: show what a video encoder actually stores, frame by frame.
 The script re-encodes the clip with H.264 as a flat gray keyframe followed
 only by P-frames (every frame of the clip becomes a P-frame). It then decodes
 each P-frame twice: normally, and against the gray keyframe instead of the
-frame before it. What a frame shows against gray is what the encoder sent for
+frame before it. What a frame shows against gray is what the encoder stored for
 it (corrections, and blocks drawn from scratch); copied blocks copy gray.
 
 Panels (--view picks which, in rows of three):
 
   decoded video     the encode, as a viewer sees it
-  motion vectors    the encoder's own arrows: "copy this block from there"
-  sent, amplified   what the frame sent, in colour, its distance from gray
-                    multiplied by --gain
-  sent per pixel    the same as a heat map: black where the encoder only
-                    copied, brighter the more it sent, on a log scale
-  prediction        what the decoder built before adding what was sent: the
-                    decoded frame minus what was sent (exact for copied blocks
+  motion vectors    the encoder's own arrows: "copy this block from there",
+                    stored in this frame and pointing back into the one before
+  stored, amplified what the frame stored, in colour, its distance from gray
+                    multiplied by --gain (default 4: most of it sits within a
+                    few levels of gray and would look flat)
+  stored per pixel  the same as a heat map: black where the encoder only
+                    copied, brighter the more it stored, on a log scale
+  prediction        what the decoder built before adding what was stored: the
+                    decoded frame minus what was stored (exact for copied blocks
                     up to H.264's edge smoothing)
   previous frame    the decoded frame before this one, which the prediction
                     is copied from (for frame 0, the gray keyframe)
 
-  --view heat        decoded | sent per pixel | motion vectors
-  --view amplified   decoded | sent, amplified | motion vectors
-  --view both        decoded + motion vectors | sent, amplified | sent per pixel
-  --view prediction  prediction | + sent, amplified | = decoded
-  --view all         previous frame (n-1) | decoded + motion vectors (n) |
-                     sent per pixel (n), above prediction (n) |
-                     + sent, amplified (n) | = decoded frame (n)   (default)
+  --view heat        decoded | stored per pixel | motion vectors
+  --view amplified   decoded | stored, amplified | motion vectors
+  --view both        decoded + motion vectors | stored, amplified | stored per pixel
+  --view prediction  prediction | + stored, amplified | = decoded
+  --view all         previous frame (n-1) | decoded (n) + motion vectors (from n-1) |
+                     stored per pixel (n), above prediction (n) |
+                     + stored, amplified (n) | = decoded frame (n)   (default)
 
-Timeline: bytes the encoder stored for each frame, and the mean change in
-each colour channel, with a playhead that follows the video.
+Timeline: bytes the encoder stored for each frame, then the mean change in
+R, G and B, each in its own strip on one shared scale, with a playhead that
+follows the video.
+
+A strip along the bottom holds mpv's frame counter and a reminder of the keys.
 
 Usage:
     python3 framediff.py input.mp4
+    python3 framediff.py input.mp4 --play        # opens the result in mpv when done
+    python3 framediff.py --open input_framediff.mp4   # reopen a render in mpv
     python3 framediff.py input.mov -o out.mp4 --view heat --crf 30
     python3 framediff.py --make-test            # builds and processes a test clip
 
@@ -46,6 +53,7 @@ import argparse
 import csv
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -57,7 +65,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 HEADER_H = 84          # label bar above the panels, in pixels (frame_report.py reads it)
-TIMELINE_H = 320       # timeline strip below the panels, in pixels
+TIMELINE_H = 420       # timeline below the panels (bytes, then R, G, B), in pixels
+STATUS_H = 44          # strip under the timeline for mpv's frame counter and the keys
 AX_LEFT_PX = 90        # timeline plot margins, in pixels (fixed so the
 AX_RIGHT_PX = 40       # playhead lines up with the plotted data)
 BG = "#000000"
@@ -65,25 +74,25 @@ FG = "#d8d8d8"
 CHANNEL_COLORS = {"R": "#ff4d4d", "G": "#3ddc84", "B": "#4d8dff"}
 BYTES_COLOR = "#ffcc33"
 # --view: rows of panels, left to right. Each panel is (source, label).
-# Sources: dec (decoded), mv (motion vectors on decoded), amp (sent, amplified),
-# heat (sent per pixel), pred (prediction), prev (previous decoded frame).
+# Sources: dec (decoded), mv (motion vectors on decoded), amp (stored, amplified),
+# heat (stored per pixel), pred (prediction), prev (previous decoded frame).
 # Labels may use {gain}.
-ROW_BOTH = [("mv", "decoded + motion vectors"), ("amp", "sent, amplified {gain}x"),
-            ("heat", "sent per pixel")]
-ROW_PREDICTION = [("pred", "prediction"), ("amp", "+ sent, amplified {gain}x"),
+ROW_BOTH = [("mv", "decoded + motion vectors"), ("amp", "stored, amplified {gain}x"),
+            ("heat", "stored per pixel")]
+ROW_PREDICTION = [("pred", "prediction"), ("amp", "+ stored, amplified {gain}x"),
                   ("dec", "= decoded video")]
 VIEWS = {
-    "heat": [[("dec", "decoded video"), ("heat", "sent per pixel"), ("mv", "motion vectors")]],
-    "amplified": [[("dec", "decoded video"), ("amp", "sent, amplified {gain}x"),
+    "heat": [[("dec", "decoded video"), ("heat", "stored per pixel"), ("mv", "motion vectors")]],
+    "amplified": [[("dec", "decoded video"), ("amp", "stored, amplified {gain}x"),
                    ("mv", "motion vectors")]],
     "both": [ROW_BOTH],
     "prediction": [ROW_PREDICTION],
     # Read top left to bottom right: pieces of the previous frame, moved by the
-    # motion vectors, make the prediction; what was sent is added to it.
+    # motion vectors, make the prediction; what was stored is added to it.
     # This is the one view that shows two frames, so its labels say which.
-    "all": [[("prev", "previous frame (n\u22121)"), ("mv", "decoded + motion vectors (n)"),
-             ("heat", "sent per pixel (n)")],
-            [("pred", "prediction (n)"), ("amp", "+ sent, amplified {gain}x (n)"),
+    "all": [[("prev", "previous frame (n\u22121)"), ("mv", "decoded (n) + motion vectors (from n\u22121)"),
+             ("heat", "stored per pixel (n)")],
+            [("pred", "prediction (n)"), ("amp", "+ stored, amplified {gain}x (n)"),
              ("dec", "= decoded frame (n)")]],
 }
 PIPED = ["amp", "heat", "pred", "prev"]   # panels computed in Python and piped, in this order
@@ -251,22 +260,22 @@ def stored_frames(enc, pairs, w, h, fps, needed, gain):
             break
         g = np.frombuffer(gray, np.uint8).reshape(h, w, 3).astype(np.int16)
         p = np.frombuffer(frame, np.uint8).reshape(h, w, 3).astype(np.int16)
-        sent = p - g
+        stored = p - g
         if dec_proc:
             d = dec_proc.stdout.read(fb)
             dec = np.frombuffer(d if len(d) == fb else bytes(fb), np.uint8).reshape(h, w, 3)
-        dev = np.minimum(np.abs(sent).max(axis=2), 255).astype(np.uint8)
+        dev = np.minimum(np.abs(stored).max(axis=2), 255).astype(np.uint8)
         copied = float((dev <= COPY_TOL).mean() * 100)
         parts = []
         for name in PIPED:
             if name not in needed:
                 continue
             if name == "amp":
-                parts.append(np.clip(sent * gain + 128, 0, 255).astype(np.uint8))
+                parts.append(np.clip(stored * gain + 128, 0, 255).astype(np.uint8))
             elif name == "heat":
                 parts.append(colours[index[dev]])
             elif name == "pred":
-                parts.append(np.clip(dec.astype(np.int16) - sent, 0, 255).astype(np.uint8))
+                parts.append(np.clip(dec.astype(np.int16) - stored, 0, 255).astype(np.uint8))
             else:
                 parts.append(prev)
         if dec_proc:
@@ -284,10 +293,14 @@ def draw_header(path, panel_w, labels):
     total_w = panel_w * len(labels)
     fig = plt.figure(figsize=(total_w / 100, HEADER_H / 100), dpi=100)
     fig.patch.set_facecolor(BG)
+    renderer = fig.canvas.get_renderer()
     for i, text in enumerate(labels):
-        fig.text((i + 0.5) / len(labels), 0.08, text, ha="center", va="bottom",
-                 color=FG, fontsize=22, family="sans-serif")
-    heat = [i for i, text in enumerate(labels) if text.startswith("sent per pixel")]
+        label = fig.text((i + 0.5) / len(labels), 0.08, text, ha="center", va="bottom",
+                         color=FG, fontsize=22, family="sans-serif")
+        # A long label shrinks until it leaves a margin inside its own panel
+        while label.get_window_extent(renderer).width > 0.88 * panel_w and label.get_fontsize() > 12:
+            label.set_fontsize(label.get_fontsize() - 1)
+    heat = [i for i, text in enumerate(labels) if text.startswith("stored per pixel")]
     if heat:
         bar_w = 260 / total_w
         cx = (heat[0] + 0.5) / len(labels)
@@ -302,47 +315,104 @@ def draw_header(path, panel_w, labels):
         ax.tick_params(length=2, pad=1, colors=FG)
         for spine in ax.spines.values():
             spine.set_visible(False)
-        fig.text(cx + bar_w / 2 + 6 / total_w, 0.67, "levels sent", ha="left",
+        fig.text(cx + bar_w / 2 + 6 / total_w, 0.67, "levels stored", ha="left",
                  va="center", color=FG, fontsize=9)
     fig.savefig(path, dpi=100, facecolor=BG)
     plt.close(fig)
 
 
+def draw_status(path, total_w):
+    """The strip under the timeline: mpv writes its frame counter at its left,
+    and the keys for stepping through frames sit at its right."""
+    fig = plt.figure(figsize=(total_w / 100, STATUS_H / 100), dpi=100)
+    fig.patch.set_facecolor(BG)
+    fig.text(1 - 20 / total_w, 0.5,
+             "in mpv:   .  next frame      ,  previous frame      space  play / pause      q  quit",
+             ha="right", va="center", color="#9a9a9a", fontsize=13, family="sans-serif")
+    fig.savefig(path, dpi=100, facecolor=BG)
+    plt.close(fig)
+
+
+def mpv_command(video, height):
+    """mpv, paused at the first frame, with the frame counter in the bottom strip.
+    mpv sizes its on-screen text as if the window were 720 pixels high, so the
+    font and margins are worked out from how much of the video the strip is."""
+    strip = STATUS_H / height * 720
+    return ["mpv", "--pause", "--keep-open=yes", "--osd-level=3",
+            "--osd-status-msg=frame ${estimated-frame-number}   ${time-pos/full}",
+            "--osd-align-x=left", "--osd-align-y=bottom",
+            f"--osd-font-size={strip * 0.62:.1f}", f"--osd-margin-y={max(1, round(strip * 0.18))}",
+            f"--osd-margin-x={max(1, round(strip * 0.4))}",
+            "--autofit-larger=90%x90%",   # the two-row render is taller than a laptop screen
+            video]
+
+
+def open_in_mpv(video):
+    """Start mpv on a render in the background, using its layout file for the size."""
+    layout_path = os.path.splitext(video)[0] + ".json"
+    if os.path.exists(layout_path):
+        height = json.load(open(layout_path)).get("height")
+    else:
+        height = None
+    if not height:
+        out = run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                   "stream=height", "-of", "csv=p=0", video], capture_output=True, text=True).stdout
+        height = int(out.strip().split(",")[0])
+    cmd = mpv_command(video, height)
+    if shutil.which("mpv") is None:
+        print("mpv is not installed (brew install mpv, or run /cms-lab:init); open "
+              f"{video} in another player instead", file=sys.stderr)
+        return
+    subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL, start_new_session=True)
+    print(f"opened {video} in mpv", file=sys.stderr)
+
+
 def draw_timeline(path, total_w, times, kbytes, types, change):
+    """Bytes stored per frame on top, then one strip per colour channel. The three
+    channel strips share one scale, so their heights compare directly."""
     fig = plt.figure(figsize=(total_w / 100, TIMELINE_H / 100), dpi=100)
     fig.patch.set_facecolor(BG)
     left = AX_LEFT_PX / total_w
     width = (total_w - AX_LEFT_PX - AX_RIGHT_PX) / total_w
-    ax1 = fig.add_axes([left, 0.52, width, 0.40])               # bytes stored
-    ax2 = fig.add_axes([left, 0.17, width, 0.28], sharex=ax1)   # pixel change
-    for ax in (ax1, ax2):
+    ax_bytes = fig.add_axes([left, 0.63, width, 0.33])
+    channel_axes = [fig.add_axes([left, y0, width, 0.135], sharex=ax_bytes)
+                    for y0 in (0.465, 0.30, 0.135)]             # R, G, B from the top
+    for ax in [ax_bytes] + channel_axes:
         ax.set_facecolor(BG)
         ax.tick_params(colors=FG, labelsize=11)
         for side in ("top", "right"):
             ax.spines[side].set_visible(False)
         for side in ("left", "bottom"):
             ax.spines[side].set_color("#555555")
-    ax1.fill_between(times, kbytes, color=BYTES_COLOR, alpha=0.35, lw=0)
-    ax1.plot(times, kbytes, color=BYTES_COLOR, lw=1.2)
+    ax_bytes.fill_between(times, kbytes, color=BYTES_COLOR, alpha=0.35, lw=0)
+    ax_bytes.plot(times, kbytes, color=BYTES_COLOR, lw=1.2)
     # Frame 0 has nothing to copy from, so it is drawn whole and is far larger
     # than the rest; scale to the others and label it instead of squashing them.
     rest = kbytes[1:] or kbytes
     ymax = max(rest) * 1.15
-    ax1.set_ylim(0, ymax)
+    ax_bytes.set_ylim(0, ymax)
     if kbytes[0] > ymax:
-        ax1.annotate(f"frame 0: {kbytes[0]:.0f} KB", xy=(times[0], ymax),
-                     xytext=(8, -14), textcoords="offset points", color=BYTES_COLOR,
-                     fontsize=11)
-    ax1.set_ylabel("KB stored", color=FG, fontsize=11)
-    plt.setp(ax1.get_xticklabels(), visible=False)
-    lines = [ax2.plot(times, change[:, i], color=CHANNEL_COLORS[ch], lw=1.2,
-                      label=ch)[0] for i, ch in enumerate("RGB")]
-    ax2.set_ylim(bottom=0)
-    ax2.set_ylabel("change %", color=FG, fontsize=11)
-    ax2.set_xlabel("seconds", color=FG, fontsize=11)
-    ax2.legend(handles=lines, loc="upper left", ncol=3, frameon=False,
-               labelcolor=FG, fontsize=10)
-    ax1.set_xlim(times[0], times[-1])
+        ax_bytes.annotate(f"frame 0: {kbytes[0]:.0f} KB", xy=(times[0], ymax),
+                          xytext=(8, -14), textcoords="offset points", color=BYTES_COLOR,
+                          fontsize=11)
+    ax_bytes.set_ylabel("KB stored", color=FG, fontsize=11)
+    top = max(float(change.max()), 1.0) * 1.1
+    for i, (ax, ch) in enumerate(zip(channel_axes, "RGB")):
+        colour = CHANNEL_COLORS[ch]
+        ax.fill_between(times, change[:, i], color=colour, alpha=0.25, lw=0)
+        ax.plot(times, change[:, i], color=colour, lw=1.0)
+        ax.set_ylim(0, top)
+        ax.set_yticks([0, round(top / 2)])
+        ax.set_ylabel(f"{ch} %", color=colour, fontsize=11, rotation=0, ha="right",
+                      va="center")
+        ax.text(1.0, 0.95, f"mean {change[1:, i].mean():.1f}%", transform=ax.transAxes,
+                ha="right", va="top", color=colour, fontsize=10)
+    for ax in [ax_bytes] + channel_axes[:-1]:
+        plt.setp(ax.get_xticklabels(), visible=False)
+    channel_axes[-1].set_xlabel("seconds  (R, G, B: mean change from the frame before, "
+                                "on one shared scale)", color=FG, fontsize=11)
+    ax_bytes.set_xlim(times[0], times[-1])
     fig.savefig(path, dpi=100, facecolor=BG)
     plt.close(fig)
 
@@ -355,17 +425,24 @@ def main():
                     help="generate framediff_test.mp4 (pattern + fractal) and process it")
     ap.add_argument("--crf", type=int, default=23,
                     help="H.264 quality, 0-51: higher sends less new data, so more of "
-                         "the 'sent per pixel' panel stays black (default 23)")
+                         "the 'stored per pixel' panel stays black (default 23)")
     ap.add_argument("--view", choices=sorted(VIEWS), default="all",
                     help="which panels: all (default, two rows), heat, amplified, both, "
                          "or prediction; see the top of this file")
     ap.add_argument("--gain", type=float, default=4,
                     help="for the amplified panel: how many times to boost the "
                          "distance from gray (default 4)")
+    ap.add_argument("--play", action="store_true",
+                    help="open the result in mpv when processing is done")
+    ap.add_argument("--open", metavar="RENDER",
+                    help="open an existing framediff.py output in mpv, without processing")
     ap.add_argument("--min-panel-width", type=int, default=640,
                     help="small sources are scaled up so labels and timeline stay legible")
     args = ap.parse_args()
 
+    if args.open:
+        open_in_mpv(args.open)
+        return
     if args.make_test:
         args.input = args.input or "framediff_test.mp4"
         make_test_clip(args.input)
@@ -418,6 +495,8 @@ def main():
             draw_header(path, pw, row_labels)
         timeline_png = os.path.join(tmp, "timeline.png")
         draw_timeline(timeline_png, total_w, times, kbytes, types, change)
+        status_png = os.path.join(tmp, "status.png")
+        draw_status(status_png, total_w)
 
         duration = max(times[-1], 1e-6)
         plot_w = total_w - AX_LEFT_PX - AX_RIGHT_PX
@@ -451,7 +530,7 @@ def main():
                 taken[name] += 1
             g.append(f"{ins}hstack=inputs=3,pad={total_w}:{row_h}:0:{HEADER_H}:black[row{r}];")
         body = "".join(f"[row{r}]" for r in range(n_rows))
-        height = n_rows * row_h + TIMELINE_H
+        height = n_rows * row_h + TIMELINE_H + STATUS_H
         if n_rows > 1:
             g.append(f"{body}vstack=inputs={n_rows},pad={total_w}:{height}:0:0:black[c0];")
         else:
@@ -468,6 +547,9 @@ def main():
         tl_y = n_rows * row_h
         g.append(f"[{tl_input}:v]format=yuva420p[tl];[c{k}][tl]overlay=0:{tl_y}:eof_action=repeat[c{k + 1}];")
         k += 1
+        g.append(f"[{tl_input + 1}:v]format=yuva420p[st];[c{k}][st]overlay=0:{tl_y + TIMELINE_H}:"
+                 f"eof_action=repeat[c{k + 1}];")
+        k += 1
         g.append(f"color=c=white:s=3x{TIMELINE_H}:r={fps:.6f}:d={1 / fps:.6f},format=yuva420p[ph];")
         g.append(f"[c{k}][ph]overlay=x='{AX_LEFT_PX}+min(t/{duration:.6f}\\,1)*{plot_w}':"
                  f"y={tl_y}:eval=frame:eof_action=repeat"
@@ -481,8 +563,8 @@ def main():
                "-framerate", rate, "-i", "pipe:0"]
         for path in headers:
             cmd += ["-i", path]
-        cmd += ["-i", timeline_png, "-i", src,
-                "-filter_complex", fc, "-map", "[out]", "-map", f"{tl_input + 1}:a?",
+        cmd += ["-i", timeline_png, "-i", status_png, "-i", src,
+                "-filter_complex", fc, "-map", "[out]", "-map", f"{tl_input + 2}:a?",
                 "-r", rate, "-c:v", "libx264", "-crf", "18", "-c:a", "aac",
                 "-shortest", out]
         print("rendering...", file=sys.stderr)
@@ -516,8 +598,14 @@ def main():
     with open(layout_path, "w") as f:
         json.dump({"view": args.view, "gain": args.gain, "crf": args.crf,
                    "panel_w": pw, "panel_h": ph, "header_h": HEADER_H,
-                   "timeline_h": TIMELINE_H, "sources": sources, "labels": labels}, f, indent=1)
+                   "timeline_h": TIMELINE_H, "status_h": STATUS_H, "height": height,
+                   "sources": sources, "labels": labels}, f, indent=1)
     print(f"wrote {out}\nwrote {csv_path}\nwrote {layout_path}", file=sys.stderr)
+    if args.play:
+        open_in_mpv(out)
+    else:
+        print(f"to step through it in mpv:  python3 {os.path.basename(sys.argv[0])} --open {out}",
+              file=sys.stderr)
 
 
 if __name__ == "__main__":
