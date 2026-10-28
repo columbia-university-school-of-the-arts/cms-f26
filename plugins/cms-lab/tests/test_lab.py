@@ -233,6 +233,10 @@ class FrameDiffTest(unittest.TestCase):
             dec_120 = pair[1, 84 + 360 + 84:84 + 360 + 84 + 360, 1280:]
             self.assertLess(np.abs(prev_120 - dec_119).mean(), 5)
             self.assertGreater(np.abs(prev_120 - dec_120).mean(), 50)
+            # At the cut the prediction is nearly empty gray: the frame drew its blocks
+            # rather than copying them, and drawn blocks borrow no copied pixels
+            pred_120 = pair[1, 84 + 360 + 84:84 + 360 + 84 + 360, :640]
+            self.assertGreater((np.abs(pred_120 - 128).max(axis=2) <= 12).mean(), 0.9)
             report = subprocess.run([sys.executable, str(lab / 'frame_report.py'), str(out), '120'],
                                     cwd=tmp, capture_output=True, text=True, check=True)
             self.assertIn('frame 120:', report.stdout)

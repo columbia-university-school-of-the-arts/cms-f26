@@ -76,16 +76,17 @@ WHAT THE PANELS SHOW
 
 The encode. framediff.py makes its own H.264 encode of the clip: one flat
 gray keyframe, then every frame of the clip as a P-frame, with no B-frames
-and no new keyframes at cuts. It is a controlled copy, one encoder at one
-setting (--crf), not the encode the clip was downloaded in.
+and no new keyframes at cuts. A drawn block may build only on drawn
+neighbours, never on copied ones (constrained intra prediction). It is a
+controlled copy, one encoder at one setting (--crf), not the encode the clip
+was downloaded in.
 
 The gray reference. Each P-frame is also decoded against the gray keyframe
 instead of the frame before it. Copied blocks then copy gray, so their
 prediction disappears and only the residual is left. Drawn blocks are
-predicted from their own frame, so they come out close to whole; where their
-neighbours were copied blocks, the guess starts from gray and the block comes
-out partly wrong. What is left is what the frame itself stored: its
-residuals and its drawn blocks.
+predicted from their own frame's drawn blocks, so they come out whole, up to
+the edge smoothing where they meet copied blocks. What is left is what the
+frame itself stored: its residuals and its drawn blocks.
 
   decoded video      the encode, as a viewer sees it.
   motion vectors     the encoder's arrows, drawn on the decoded frame (n),
