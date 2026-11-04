@@ -131,8 +131,9 @@ def make_test_clip(path):
 
 def encode_p_only(src, dst, pw, ph, fps, crf):
     """A gray keyframe, then the clip as P-frames only: no B-frames, no new
-    keyframes at cuts, one reference frame, one slice per frame. Raw Annex B
-    H.264, so frames can be cut apart and rearranged."""
+    keyframes at cuts, one reference frame, one slice per frame, and drawn
+    blocks that never build on copied ones. Raw Annex B H.264, so frames can
+    be cut apart and rearranged."""
     lead = f"color=c=0x808080:s={pw}x{ph}:r={fps:.6f}"
     run(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
          "-f", "lavfi", "-i", lead, "-i", src,
@@ -144,7 +145,11 @@ def encode_p_only(src, dst, pw, ph, fps, crf):
          f"[g][v]concat=n=2:v=1[o]",
          "-map", "[o]", "-an", "-r", f"{fps:.6f}",
          "-c:v", "libx264", "-preset", "veryfast", "-crf", str(crf), "-bf", "0",
-         "-x264-params", "keyint=1000000:min-keyint=1000000:scenecut=0:ref=1:slices=1",
+         # constrained-intra: a drawn block predicts only from drawn neighbours. Against
+         # the gray keyframe its copied neighbours turn gray; without this, that error
+         # spreads through every drawn block built on them and tints the prediction
+         "-x264-params", "keyint=1000000:min-keyint=1000000:scenecut=0:ref=1:slices=1:"
+                         "constrained-intra=1",
          "-bsf:v", "h264_mp4toannexb", "-f", "h264", dst])
 
 

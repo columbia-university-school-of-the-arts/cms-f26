@@ -34,10 +34,11 @@ forward but not back. Mention `/cms-lab:init` for later.
 Copy `assets/lab/` beside this skill to `~/cms-lab/frame-diff/` only if that
 folder does not exist. On later runs, read `experiment.md` and continue; never
 overwrite the student's notes. The installed plugin is a template, not the
-place to save their changes. If the folder exists from version 0.7 (its
-`framediff.py` mentions `--threshold`), copy the new `framediff.py` and
-`frame_report.py` over the old ones only after the student agrees, and keep
-their `experiment.md` and `out/`.
+place to save their changes. If the folder's `framediff.py` predates 0.8.2
+(the string `constrained-intra` appears nowhere in it), copy the new
+`framediff.py` and `frame_report.py` over the old ones only after the student
+agrees, and keep their `experiment.md` and `out/`. The older script tints the
+prediction panel at cuts, so offer to render its outputs again.
 
 The project installs its two Python packages (numpy, matplotlib) into its own
 folder:
@@ -56,6 +57,8 @@ settings; this is a controlled copy, so what they see is one encoder's
 choices, made visible. Each P-frame is decoded twice: normally, and against
 the gray keyframe instead of the frame before it. Blocks the encoder only
 copied then copy gray, so what is left is what the frame itself stored.
+Blocks it drew from scratch build only on other drawn blocks (constrained
+intra prediction), so against gray they come out whole.
 
 | Panel | What it shows |
 | --- | --- |
@@ -108,10 +111,12 @@ pattern, and what it will show at the cut. mpv opens when it finishes (Step 4). 
 2 s the heat map is almost all black: the bars do not move, so the encoder
 copies them and sends only the moving line and the checkerboard. At frame 120
 (4 s) the heat map lights up across the whole frame and the top strip spikes;
-the prediction is nearly empty gray, apart from one blue block the encoder
-copied from the colour bars anyway, which shows the wrong colour until what
-was stored corrects it. If none of this appears, something is wrong with the
-install; show the error rather than continuing.
+the prediction is nearly empty gray, apart from a few blocks the encoder
+copied from the colour bars anyway, which show the wrong colour until what
+was stored corrects them. A prediction tinted across the frame, a ghost of the
+fractal, means a `framediff.py` from before 0.8.2 (see above). If none of
+this appears, something is wrong with the install; show the error rather than
+continuing.
 
 ## Step 2: the student's clip
 
