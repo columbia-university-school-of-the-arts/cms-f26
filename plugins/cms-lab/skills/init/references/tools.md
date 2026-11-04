@@ -22,6 +22,7 @@ in. A student without it follows the hub README's setup section first.
 | 7 | monolith | `monolith -V` | `brew install monolith` | `sudo snap install monolith`; if snap is unavailable, the release binary (see note) | capturing web pages |
 | 7 | git identity | `git config --global user.email` prints an address | set from GitHub (see note) | same | every commit, inside WSL above all |
 | 8 | mpv | `mpv --version` | `brew install mpv` | `sudo apt install -y mpv` (see note) | frame-diff, to step forward and back one frame at a time |
+| 9 | yt-dlp 2026.10.26 or newer | `yt-dlp --version` prints 2026.10.26 or a later date (see note) | `brew install yt-dlp`, or `brew upgrade yt-dlp` if it is older | `sudo apt install -y pipx`, then `pipx install "yt-dlp[default]"`, or `pipx upgrade yt-dlp` if it is older | the Week 9 agent's `scripts/yt.py`, and the router's captions |
 
 Notes on rows:
 
@@ -67,5 +68,13 @@ Notes on rows:
   from the terminal. Inside WSL it opens a window only on Windows 11, through
   WSLg; on Windows 10 the check passes but no window appears, so record that
   and have the student open videos from Windows instead.
+- **yt-dlp** ages fast: YouTube changes, and an older release stops finding
+  captions or answers every request with a bot check. Its versions are dates,
+  so compare them as text: `2026.11.02` is newer than `2026.10.26`. The fleet
+  scripts use the `yt-dlp` on `PATH` first, so this row is the one that
+  matters; the copy in a fleet repository's `.venv` is used only when `PATH`
+  has none, and upgrades with `.venv/bin/python -m pip install -U "yt-dlp[default]"`.
+  The minimum rises whenever YouTube breaks an older release. Inside WSL,
+  `pipx` puts it in `~/.local/bin`, which must be on `PATH`.
 - Python packages never go here. Each project installs its own into its own
   `.venv` under `~/cms-lab/<project>/`.
