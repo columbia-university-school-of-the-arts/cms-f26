@@ -1,0 +1,57 @@
+name: icm-architect upstream
+on:
+  schedule:
+    - cron: "0 14 * * 1"   # Mondays, 9:00 New York
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Compare the pinned commit with upstream
+        id: compare
+        run: |
+          pinned=$(sed -n 's/^commit: //p' plugins/cms-lab/skills/icm-architect/UPSTREAM)
+          latest=$(git ls-remote https://github.com/RinDig/icm-architect HEAD | cut -f1)
+          echo "pinned=$pinned" >> "$GITHUB_OUTPUT"
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          if [ "$pinned" = "$latest" ]; then echo "moved=no" >> "$GITHUB_OUTPUT"; else echo "moved=yes" >> "$GITHUB_OUTPUT"; fi
+      - name: Open a pull request with the new copy
+        if: steps.compare.outputs.moved == 'yes'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PINNED: ${{ steps.compare.outputs.pinned }}
+          LATEST: ${{ steps.compare.outputs.latest }}
+        run: |
+          branch="icm-upstream-${LATEST:0:7}"
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then echo "already open"; exit 0; fi
+          git clone --quiet https://github.com/RinDig/icm-architect /tmp/icm
+          git -C /tmp/icm checkout --quiet "$LATEST"
+          log=$(git -C /tmp/icm log --oneline "$PINNED..$LATEST" | head -50)
+          dest=plugins/cms-lab/skills/icm-architect
+          cp "$dest/UPSTREAM" /tmp/UPSTREAM
+          rsync -a --delete --exclude .git --exclude UPSTREAM /tmp/icm/ "$dest/"
+          date=$(git -C /tmp/icm log -1 --format=%cI)
+          sed -i "s/^commit: .*/commit: $LATEST/; s/^committed: .*/committed: $date/; s/^vendored: .*/vendored: $(date -u +%F)/" /tmp/UPSTREAM
+          cp /tmp/UPSTREAM "$dest/UPSTREAM"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add "$dest"
+          git commit -m "icm-architect: upstream moved to ${LATEST:0:7}"
+          git push origin "$branch"
+          cat > /tmp/body.md <<EOF
+          Upstream icm-architect moved from ${PINNED:0:7} to ${LATEST:0:7}.
+
+          Read the diff before merging: students' Claude follows these instructions. On merge, bump cms-lab's version in plugins/cms-lab/.claude-plugin/plugin.json.
+
+          Upstream commits:
+
+          \`\`\`
+          $log
+          \`\`\`
+          EOF
+          gh pr create --title "icm-architect: upstream moved to ${LATEST:0:7}" --body-file /tmp/body.md --head "$branch"
