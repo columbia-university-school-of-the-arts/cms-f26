@@ -93,15 +93,21 @@ Do NOT load: what an eager agent would wrongly pull in.
 - `name.md` in `output/`
 
 ## Check
-Who or what checks, as one concrete act. A check that is not a person writes `output/check.md`, first line `pass` or `fail: <why>`, then two short lists: Observed, and Not established.
+Who or what checks, as one concrete act. A model check's sentence requires the content to be right, not only cited. A check that is not a person writes `output/check.md`, first line `pass` or `fail: <why>`, then two short lists: Observed, and Not established.
 ```
 
 - A feedback arrow back to an earlier step becomes an output of the later
   stage (for example `output/new-queries.md`) that the earlier stage lists as
   an optional input. The student re-runs from there with
-  `python3 scripts/run_workflow.py --redo NN`.
+  `python3 scripts/run_workflow.py --redo NN`. On `--redo`, the runner
+  copies those files to `workflow/rounds/` before setting outputs aside and
+  tells the stage where they are.
 - A check that is not a person writes `output/check.md`, first line `pass` or
   `fail: <why>`. A person's check is the student writing that file.
+- A model check's sentence decides what passes. Write it to require the
+  content to be right (every film named is on the page it is tied to; every
+  quote appears in the page text), not only that citations resolve. A check
+  that asks only for citations passes a map with misreadings.
 - Record state in one place: `output/check.md`. Do not add `status:` lines to
   outputs or any other state vocabulary; the runner reads only `check.md`.
 - A check a script can make (quotes found in the page text, cited ids that
@@ -128,6 +134,8 @@ https://github.com/RinDig/icm-architect, and say what you took.
   files; never copy their text. Course readings stay on the student's machine.
 - Write `workflow/CLAUDE.md` with the one line `@AGENTS.md`, since Claude Code
   reads `CLAUDE.md` in a folder and not `AGENTS.md`.
+- Claude Code asks before writing each file in `.claude/agents/`; tell the
+  student to expect one prompt per agent and to approve each after reading it.
 - Nothing outside `workflow/`, `.claude/agents/`, and `notes/PATTERNS.md`
   changes.
 
