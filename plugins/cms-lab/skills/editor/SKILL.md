@@ -23,7 +23,8 @@ step does in one sentence before doing it.
    Open that address for the student: `open "<address>"` on a Mac,
    `explorer.exe "<address>"` in Ubuntu on Windows. If opening fails, give
    them the address to paste into their browser. The address is theirs
-   alone; do not post it anywhere.
+   alone: give it to them, and again whenever they ask for it (for example
+   after closing the tab), but never post it anywhere else.
 
 4. Tell them, in a few lines:
    - the pipeline is their workflow; click a stage, an agent, or a skill to
@@ -34,7 +35,8 @@ step does in one sentence before doing it.
      writes nothing until they save;
    - Save writes only what passes the course's checks and never commits, so
      they commit in the terminal when they are ready;
-   - to stop the editor, ask you to stop it, or press Ctrl-C in the terminal
-     where it runs.
+   - to stop the editor, ask Claude to stop it, and Claude stops the
+     background task it started. If they started it themselves with
+     `python3 scripts/fleet_editor.py` in a terminal, Ctrl-C there stops it.
 
 If they ask you to stop it, stop the background task you started.
