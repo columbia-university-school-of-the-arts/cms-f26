@@ -1,6 +1,6 @@
 ---
 name: workflow
-description: "Week 11: turn the student's corrected workflow/workflow.md into a workflow that runs: one stage per step under workflow/stages/, each saying what it reads, makes, runs, and how it is checked, built to the course's stage contract. Run it in Claude Code in the fleet repository. Safe to run again."
+description: "From Week 10: turn the student's corrected workflow/workflow.md into a workflow that runs: one stage per step under workflow/stages/, each saying what it reads, makes, runs, and how it is checked, built to the course's stage contract. Run it in Claude Code in the fleet repository. Safe to run again."
 ---
 
 # From your drawn workflow to one that runs
