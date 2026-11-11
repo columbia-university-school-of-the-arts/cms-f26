@@ -55,14 +55,16 @@ plain `key: value` lines between `---` lines:
 ---
 kind: agent
 agent: primary-mapper
-allow: Read, Write, Bash(python3 scripts/lantern.py:*)
+allow: Read, Bash(python3 scripts/lantern.py:*)
 check: model
 timeout: 900
 ---
 ```
 
 `kind:` and `check:` come from step 2. An `agent` stage names its `agent:`
-and lists in `allow:` only the tools it needs. A `script` stage has
+and lists in `allow:` only the tools it needs. Never list `Write` or
+`Edit`: the runner lets each stage write to its own `output/` and nowhere
+else, and refuses an `allow:` line that grants more. A `script` stage has
 `command:`. A `script` check has `check_command:`. A `fleet` stage has
 `agent:` or `command:` pointing at what already exists, and copies nothing.
 
