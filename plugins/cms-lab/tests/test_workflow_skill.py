@@ -9,7 +9,7 @@ class WorkflowSkillTest(unittest.TestCase):
         manifest = json.loads((PLUGIN / ".claude-plugin" / "plugin.json").read_text())
         self.assertIn("./skills/workflow", manifest["skills"])
         self.assertNotIn("./skills/icm-architect", manifest["skills"])
-        self.assertEqual(manifest["version"], "0.10.0")
+        self.assertEqual(manifest["version"], "0.11.0")
 
     def test_icm_architect_is_gone(self):
         self.assertFalse((PLUGIN / "skills" / "icm-architect").exists())
