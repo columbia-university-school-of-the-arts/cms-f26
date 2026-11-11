@@ -1,8 +1,8 @@
 {
   "name": "cms-lab",
-  "version": "0.9.0",
-  "description": "The CMS lab: /cms-lab:init readies the machine once; projects such as /cms-lab:scene-detect then run in local folders under ~/cms-lab.",
+  "version": "0.10.0",
+  "description": "The CMS lab: /cms-lab:init readies the machine once; projects such as /cms-lab:scene-detect then run in local folders under ~/cms-lab, and /cms-lab:workflow turns a drawn workflow into one that runs.",
   "author": {"name": "Behrang Garakani"},
   "license": "CC-BY-NC-SA-4.0",
-  "skills": ["./skills/init", "./skills/scene-detect", "./skills/tmdb", "./skills/absa", "./skills/research-repo", "./skills/frame-diff"]
+  "skills": ["./skills/init", "./skills/scene-detect", "./skills/tmdb", "./skills/absa", "./skills/research-repo", "./skills/frame-diff", "./skills/workflow", "./skills/icm-architect"]
 }
