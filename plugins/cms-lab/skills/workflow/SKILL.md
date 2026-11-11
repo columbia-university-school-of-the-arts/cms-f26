@@ -67,6 +67,11 @@ and lists in `allow:` only the tools it needs. Never list `Write` or
 else, and refuses an `allow:` line that grants more. A `script` stage has
 `command:`. A `script` check has `check_command:`. A `fleet` stage has
 `agent:` or `command:` pointing at what already exists, and copies nothing.
+A `fleet` stage that names an agent needs an `allow: Bash(...)` line for that
+agent's scripts.
+
+`command` and `check_command` run from the repository root; paths under
+Inputs are relative to the stage folder.
 
 Use only these keys: `kind`, `agent`, `command`, `allow`, `check`,
 `check_command`, `timeout`. The runner refuses any other.
@@ -101,7 +106,10 @@ Who or what checks, as one concrete act. A model check's sentence requires the c
   an optional input. The student re-runs from there with
   `python3 scripts/run_workflow.py --redo NN`. On `--redo`, the runner
   copies those files to `workflow/rounds/` before setting outputs aside and
-  tells the stage where they are.
+  tells the stage where they are. The earlier stage should also list its own
+  previous output as a later-round input (for example
+  `../01_find-pages/output/candidates.md`), so a later round can skip what
+  round one already found.
 - A check that is not a person writes `output/check.md`, first line `pass` or
   `fail: <why>`. A person's check is the student writing that file.
 - A model check's sentence decides what passes. Write it to require the
@@ -111,8 +119,10 @@ Who or what checks, as one concrete act. A model check's sentence requires the c
 - Record state in one place: `output/check.md`. Do not add `status:` lines to
   outputs or any other state vocabulary; the runner reads only `check.md`.
 - A check a script can make (quotes found in the page text, cited ids that
-  exist) is a `script` check: `check: script` and a `check_command` naming a
-  committed script under `scripts/` that exits non-zero on failure.
+  exist) is a `script` check: `check: script` and a `check_command`. A check
+  script you write goes in `workflow/_tools/`, is committed with the stages,
+  and is named as `python3 workflow/_tools/<name>.py`; it exits non-zero on
+  failure.
 - Put the judgment early: a stage whose output a person corrects (a list of
   candidates, an outline) comes before the expensive work that depends on it,
   since a correction is cheapest at the first check.
@@ -134,6 +144,10 @@ https://github.com/RinDig/icm-architect, and say what you took.
   files; never copy their text. Course readings stay on the student's machine.
 - Write `workflow/CLAUDE.md` with the one line `@AGENTS.md`, since Claude Code
   reads `CLAUDE.md` in a folder and not `AGENTS.md`.
+- The agent file's `tools:` line names the tools the stage's `allow:` line
+  names plus `Read`, `Write`, and `Edit`, since the agent must write its
+  `output/`. The stage's `allow:` line names no `Write` or `Edit`; the runner
+  grants `output/`.
 - Claude Code asks before writing each file in `.claude/agents/`; tell the
   student to expect one prompt per agent and to approve each after reading it.
 - Nothing outside `workflow/`, `.claude/agents/`, and `notes/PATTERNS.md`

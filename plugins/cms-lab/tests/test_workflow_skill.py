@@ -5,7 +5,7 @@ PLUGIN = pathlib.Path(__file__).resolve().parents[1]
 
 
 class WorkflowSkillTest(unittest.TestCase):
-    def test_plugin_lists_only_workflow(self):
+    def test_plugin_lists_workflow_and_not_icm_architect(self):
         manifest = json.loads((PLUGIN / ".claude-plugin" / "plugin.json").read_text())
         self.assertIn("./skills/workflow", manifest["skills"])
         self.assertNotIn("./skills/icm-architect", manifest["skills"])
