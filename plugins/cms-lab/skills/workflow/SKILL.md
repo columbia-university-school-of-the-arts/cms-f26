@@ -62,12 +62,24 @@ annotated `workflow/workflow.md`, with these rules:
   and lists in `allow:` only the tools it needs. A `script` stage has
   `command:`. A `script` check has `check_command:`. A `fleet` stage has
   `agent:` or `command:` pointing at what already exists, and copies nothing.
+
+  Use only these keys: `kind`, `agent`, `command`, `allow`, `check`,
+  `check_command`, `timeout`. The runner refuses any other.
 - A feedback arrow back to an earlier step becomes an output of the later
   stage (for example `output/new-queries.md`) that the earlier stage lists as
   an optional input. The student re-runs from there with
   `python3 scripts/run_workflow.py --redo NN`.
 - A check that is not a person writes `output/check.md`, first line `pass` or
   `fail: <why>`. A person's check is the student writing that file.
+- Record state in one place: `output/check.md`, whose first line is `pass` or
+  `fail: <why>`. Do not add `status:` lines to outputs or any other state
+  vocabulary; the runner reads only `check.md`.
+- icm-architect copies its scripts into `workflow/_tools/` and blank output
+  files into `workflow/_templates/`; keep both. A check that one of its
+  scripts can make (quotes found in the page text, cited ids that exist) is a
+  `script` check: `check: script` and
+  `check_command: python3 workflow/_tools/check.py ...`, written to exit
+  non-zero on failure.
 
 ## 4. The course contract
 
@@ -77,8 +89,9 @@ annotated `workflow/workflow.md`, with these rules:
   the second person, and nothing more.
 - No stage file or agent file quotes from `corpus/` or `sources/`. Name
   files; never copy their text. Course readings stay on the student's machine.
-- Write `workflow/CLAUDE.md` with one line, `@AGENTS.md`, since Claude Code
-  reads `CLAUDE.md` in a folder and icm-architect writes `AGENTS.md`.
+- Make sure `workflow/CLAUDE.md` holds the one line `@AGENTS.md`
+  (icm-architect usually writes it), since Claude Code reads `CLAUDE.md` in a
+  folder and not `AGENTS.md`.
 - Nothing outside `workflow/` and `.claude/agents/` changes.
 
 ## 5. Check, then commit
@@ -86,11 +99,10 @@ annotated `workflow/workflow.md`, with these rules:
 Run both, and fix what they report before going on:
 
     python3 scripts/run_workflow.py check
-    python3 .claude/skills/icm-architect/scripts/links.py workflow
+    python3 -I workflow/_tools/links.py workflow
 
-If `links.py` is not at that path, it is in this plugin's
-`skills/icm-architect/scripts/`; run it from there with `workflow` as its
-argument. Then run icm-architect's walk test: in a fresh reading of
+If icm-architect did not copy `links.py` into `workflow/_tools/`, run it from
+this plugin's `skills/icm-architect/scripts/`. Then run icm-architect's walk test: in a fresh reading of
 `workflow/AGENTS.md` alone, can you say what the workflow does, what stage
 comes next, and what state each stage is in? Then:
 
