@@ -48,6 +48,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg); bor
 .unsure-list { margin: 10px 0 0; padding: 8px 12px; background: var(--unsure-bg); color: var(--unsure-ink); border-radius: 6px; }
 .unsure-list ul { margin: 4px 0 0; padding-left: 20px; }
 .arrows { color: var(--muted); font-size: 0.9rem; margin: 0 0 16px 16px; }
+.from { color: var(--muted); font-size: 0.9rem; margin: -4px 0 8px; }
 .arrows .loop { color: var(--accent); font-weight: 600; }
 h3 { font-size: 1rem; margin: 32px 0 8px; }
 .changes { padding-left: 20px; color: var(--muted); font-size: 0.9rem; }
@@ -74,7 +75,7 @@ h3 { font-size: 1rem; margin: 32px 0 8px; }
       "run": "Search the Lantern media history library (lantern.mediahist.org) for 1914 trade-press pages that mention Chaplin, Keystone, or this year's titles. List each page with its id, title, date, and one sentence on why it matters. Also read workflow/rounds/ for queries from a previous round.",
       "state": "works",
       "state_date": "2026-11-11",
-      "state_note": "Kept 26 of 68 pages. Round 2, from step 6's queries, returned 169, many repeats.",
+      "state_note": "Ran in Claude Code with the course scripts; not yet tried in Cowork. Kept 26 of 68 pages. Round 2, from step 6's queries, returned 169, many repeats.",
       "you_or_it": "UNSURE",
       "credited": "UNSURE",
       "mine": false,
@@ -95,7 +96,7 @@ h3 { font-size: 1rem; margin: 32px 0 8px; }
       "run": "For each page I kept, fetch its full text from Lantern and save it as sources/pages/<page id>.md.",
       "state": "works",
       "state_date": "2026-11-11",
-      "state_note": "26 page texts.",
+      "state_note": "Ran in Claude Code with the course scripts; not yet tried in Cowork. 26 page texts.",
       "you_or_it": "UNSURE",
       "credited": "UNSURE",
       "mine": false,
@@ -116,7 +117,7 @@ h3 { font-size: 1rem; margin: 32px 0 8px; }
       "run": "Search OpenAlex for scholarship on Chaplin at Keystone and on early film comedy's reception. List each work with authors, year, and one sentence on why it matters, saying when the reason rests on the title alone.",
       "state": "works",
       "state_date": "2026-11-11",
-      "state_note": "Kept 17 of 35 works. OpenAlex gave titles only, so every reason rested on the title.",
+      "state_note": "Ran in Claude Code with the course scripts; not yet tried in Cowork. Kept 17 of 35 works. OpenAlex gave titles only, so every reason rested on the title.",
       "you_or_it": "UNSURE",
       "credited": "UNSURE",
       "mine": false,
@@ -137,7 +138,7 @@ h3 { font-size: 1rem; margin: 32px 0 8px; }
       "run": "From sources/pages/, map each film, each date, and each phrase used of Chaplin, page by page, quoting each with its page id. Then check the map: search each quotation in its page and report anything that is not there.",
       "state": "works",
       "state_date": "2026-11-11",
-      "state_note": "Failed its first check: two Keystone titles were tied to a page that names neither. The retry passed.",
+      "state_note": "Ran in Claude Code with the course scripts; not yet tried in Cowork. Failed its first check: two Keystone titles were tied to a page that names neither. The retry passed.",
       "you_or_it": "UNSURE",
       "credited": "UNSURE",
       "mine": false,
@@ -158,7 +159,7 @@ h3 { font-size: 1rem; margin: 32px 0 8px; }
       "run": "Name the concepts the reviewers use (type, personality, the tramp, Keystone's speed, knockabout) and the concepts the literature brings, and connect them. Split what you found into Observed and Not established.",
       "state": "works",
       "state_date": "2026-11-11",
-      "state_note": "Passed, but its check asked only that citations resolve; three misreadings sat in its own Not established list.",
+      "state_note": "Ran in Claude Code with the course scripts; not yet tried in Cowork. Passed, but its check asked only that citations resolve; three misreadings sat in its own Not established list.",
       "you_or_it": "UNSURE",
       "credited": "UNSURE",
       "mine": false,
@@ -179,7 +180,7 @@ h3 { font-size: 1rem; margin: 32px 0 8px; }
       "run": "From the two maps, list what is missing: films with no review, terms to search again, years to widen to. Save the ones I choose to workflow/rounds/.",
       "state": "works",
       "state_date": "2026-11-11",
-      "state_note": "Kept 12 of 33 queries; they went back to step 1 as round 2.",
+      "state_note": "Ran in Claude Code with the course scripts; not yet tried in Cowork. Kept 12 of 33 queries; they went back to step 1 as round 2.",
       "you_or_it": "UNSURE",
       "credited": "UNSURE",
       "mine": false,
@@ -277,18 +278,33 @@ function val(v) {
   var s = esc(v);
   return s.indexOf("UNSURE") === -1 ? s : s.replace(/UNSURE/g, '<span class="unsure">UNSURE</span>');
 }
+function list(v) { return v == null || v === "" ? [] : [].concat(v); }
+function key(v) { return String(v == null ? "" : v).trim(); }
+function isLoop(a, order) {
+  if (a.loop === true) return true;
+  var f = order[key(a.from)], t = order[key(a.to)];
+  return f !== undefined && t !== undefined && t <= f;
+}
+function arrowText(a, order) {
+  var mark = a.unsure === true ? ' <span class="unsure">UNSURE</span>' : '';
+  return (isLoop(a, order) ? '<span class="loop">&#8634; loops back to ' + val(a.to) + '</span>'
+    : '&darr; goes to ' + val(a.to)) + mark;
+}
 function renderWorkflow(d) {
-  var steps = d.steps || [], arrows = d.arrows || [], changes = d.changes || [];
+  var steps = list(d.steps), arrows = list(d.arrows), changes = list(d.changes), order = {};
+  steps.forEach(function (s, i) { order[key(s.n)] = i; });
   var h = '<h1>' + val(d.title) + '</h1>';
   h += '<p class="question">' + val(d.question) + '</p>';
   h += '<p class="meta">Begun ' + esc(d.begun) + ' &middot; ' + steps.length + ' steps</p>';
   steps.forEach(function (s) {
     var state = s.state || "not tried";
-    var chk = s.check || {};
+    var chk = typeof s.check === "string" ? {by: s.check} : (s.check || {});
+    var into = arrows.filter(function (a) { return key(a.to) === key(s.n); });
     h += '<section class="step" id="step-' + esc(s.n) + '">';
     h += '<h2><span class="num">' + esc(s.n) + '.</span> ' + val(s.name);
-    if (s.mine) h += ' <span class="badge mine">mine</span>';
+    if (s.mine === true) h += ' <span class="badge mine">mine</span>';
     h += ' <span class="badge state-' + esc(state).replace(/ /g, "-") + '">' + esc(state) + '</span></h2>';
+    if (into.length) h += '<p class="from">comes from ' + into.map(function (a) { return val(a.from); }).join(', ') + '</p>';
     h += '<dl>';
     h += '<dt>In</dt><dd>' + val(s.in) + '</dd>';
     h += '<dt>Out</dt><dd>' + val(s.out) + '</dd>';
@@ -299,30 +315,39 @@ function renderWorkflow(d) {
     h += '<dt>Claude here is</dt><dd>' + (s.you_or_it === "you" ? 'a &ldquo;you&rdquo;' : s.you_or_it === "it" ? 'an &ldquo;it&rdquo;' : val(s.you_or_it)) + '</dd>';
     h += '<dt>Credited</dt><dd>' + val(s.credited) + '</dd>';
     h += '</dl>';
-    if (s.unsure && s.unsure.length) {
+    var doubts = list(s.unsure);
+    if (doubts.length) {
       h += '<div class="unsure-list"><strong>Still UNSURE</strong><ul>';
-      s.unsure.forEach(function (u) { h += '<li>' + esc(u) + '</li>'; });
+      doubts.forEach(function (u) { h += '<li>' + esc(u) + '</li>'; });
       h += '</ul></div>';
     }
     h += '</section>';
-    var out = arrows.filter(function (a) { return a.from === s.n; });
-    if (out.length) {
-      h += '<p class="arrows">' + out.map(function (a) {
-        return a.loop ? '<span class="loop">&#8634; loops back to ' + esc(a.to) + '</span>' : '&darr; goes to ' + esc(a.to);
-      }).join(' &middot; ') + '</p>';
-    } else {
-      h += '<p class="arrows">ends here</p>';
-    }
+    var out = arrows.filter(function (a) { return key(a.from) === key(s.n); });
+    h += '<p class="arrows">' + (out.length ? out.map(function (a) { return arrowText(a, order); }).join(' &middot; ') : 'ends here') + '</p>';
   });
+  var stray = arrows.filter(function (a) { return order[key(a.from)] === undefined || order[key(a.to)] === undefined; });
+  if (stray.length) {
+    h += '<div class="unsure-list"><strong>UNSURE arrows</strong> (a step they name is not on the map)<ul>';
+    stray.forEach(function (a) { h += '<li>' + esc(a.from) + ' to ' + esc(a.to) + '</li>'; });
+    h += '</ul></div>';
+  }
   h += '<h3>Changes</h3><ul class="changes">';
-  changes.forEach(function (c) { h += '<li>' + esc(c.date) + ': ' + val(c.what) + '</li>'; });
+  changes.forEach(function (c) { h += '<li>' + esc(c && c.date) + ': ' + val(c && c.what) + '</li>'; });
   h += '</ul>';
   return h;
 }
+function loadWorkflow(text) {
+  try {
+    return renderWorkflow(JSON.parse(text));
+  } catch (e) {
+    return '<div class="unsure-list"><strong>The map\'s data has an error:</strong> ' + esc(e.message) +
+      '. Ask Claude to fix the JSON block.</div>';
+  }
+}
 if (typeof document !== "undefined" && document) {
-  var data = JSON.parse(document.getElementById("workflow").textContent);
-  document.title = data.title || "Workflow map";
-  document.getElementById("map").innerHTML = renderWorkflow(data);
+  var text = document.getElementById("workflow").textContent;
+  try { document.title = JSON.parse(text).title || "Workflow map"; } catch (e) {}
+  document.getElementById("map").innerHTML = loadWorkflow(text);
 }
 </script>
 </body>

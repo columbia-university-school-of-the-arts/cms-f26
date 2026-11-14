@@ -18,6 +18,11 @@ run on the map.
 
 Use what the student already has, in this order:
 
+0. **An existing map.** One in this conversation, a section in
+   `workflow/map.md` in the attached folder, or JSON the student pastes. When
+   the student asks to change the map or record a run, find the existing map
+   first; if there is none, ask them to paste its JSON before doing anything
+   else. Never build a new map from the drawing when they asked to change one.
 1. Claude's corrected reading of their drawing, earlier in this project's
    chat (the Week 10 reading, a Markdown list of steps and arrows).
 2. The photo of the drawing, in this chat or the project's files.
@@ -58,7 +63,8 @@ The page keeps the whole workflow in one JSON block,
 - `question`: the research question, one line, from the thesis.
 - `begun`: the date the map was started, `YYYY-MM-DD`.
 - `steps`: in order, each with:
-  - `n`: the step's number.
+  - `n`: the step's number, or a label such as `2a` when the drawing has
+    sub-steps.
   - `name`: a few words.
   - `in` and `out`: what goes in, what comes out.
   - `who`: `me`, `Claude`, `a script`, `someone else`, or `UNSURE`.
@@ -72,8 +78,15 @@ The page keeps the whole workflow in one JSON block,
   - `unsure`: a list of what is still uncertain in this step.
 - `arrows`: each `from` a step `to` a step, with `loop: true` when it goes
   back to an earlier step. Keep every arrow in the drawing, feedback loops
-  included.
+  included. For an arrow you are not sure of, keep the steps you believe it
+  joins, add `"unsure": true`, and explain the doubt in the `unsure` list of
+  the step it starts from.
 - `changes`: the change log, newest first, each with a `date` and `what`.
+
+The block must stay valid JSON, or the page shows an error in place of the
+map: escape double quotes inside strings as `\"`, leave no trailing commas,
+and write `<\/` wherever a string contains `</`, so that a student's
+`</script>` cannot end the block.
 
 ## Making the page
 
@@ -98,10 +111,15 @@ one step at a time.
 ## Saving a copy in the repository
 
 At the end of a working session, write the JSON block to `workflow/map.md` in
-the attached fleet repository folder, under a heading with the map's title and
-today's date, fenced as `json`. The student commits and pushes it from the
-terminal. That copy is how the map survives a lost chat and moves to a new
-project.
+the attached fleet repository folder, fenced as `json`. Keep one section per
+map, headed with the map's title: replace that section in place, add a new
+section for a new project's map, and rebuild from the section whose title
+matches. The student commits and pushes it from the terminal. That copy is how
+the map survives a lost chat and moves to a new project.
+
+When no folder is attached, give the student the whole JSON block, fenced, in
+the chat at the end of the session, and tell them to keep it: it is what they
+paste to continue in a later chat or save to `workflow/map.md` later.
 
 ## A new project
 
