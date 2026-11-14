@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workflow map</title>
+<style>
+:root {
+  --bg: #fbfaf7; --card: #ffffff; --ink: #1d1d1b; --muted: #66645e; --line: #dedbd2;
+  --accent: #2f5d8a; --mine: #2e7d4f; --unsure-bg: #fff3c4; --unsure-ink: #6b4e00;
+  --works: #2e7d4f; --broken: #b3261e; --tried: #8a6d00; --nottried: #66645e;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161614; --card: #22221f; --ink: #ecebe6; --muted: #a3a199; --line: #3a3934;
+    --accent: #8ab4e0; --mine: #7fcf9c; --unsure-bg: #4a3d0c; --unsure-ink: #ffe28a;
+    --works: #7fcf9c; --broken: #ff8a80; --tried: #e6c65c; --nottried: #a3a199;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161614; --card: #22221f; --ink: #ecebe6; --muted: #a3a199; --line: #3a3934;
+  --accent: #8ab4e0; --mine: #7fcf9c; --unsure-bg: #4a3d0c; --unsure-ink: #ffe28a;
+  --works: #7fcf9c; --broken: #ff8a80; --tried: #e6c65c; --nottried: #a3a199;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  overflow-wrap: anywhere; }
+main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 1.6rem; line-height: 1.2; margin: 0 0 6px; }
+.question { font-size: 1.05rem; margin: 0 0 4px; }
+.meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 24px; }
+.step { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  padding: 14px 16px; margin: 0 0 6px; }
+.step h2 { font-size: 1.1rem; margin: 0 0 8px; display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+.num { color: var(--accent); font-variant-numeric: tabular-nums; }
+.badge { font-size: 0.75rem; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; }
+.badge.mine { color: var(--mine); }
+.state-works { color: var(--works); } .state-broken { color: var(--broken); }
+.state-tried { color: var(--tried); } .state-not-tried { color: var(--nottried); }
+dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 0; }
+dt { color: var(--muted); font-size: 0.9rem; }
+dd { margin: 0; }
+@media (max-width: 520px) { dl { grid-template-columns: minmax(0, 1fr); } dt { margin-top: 6px; } }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg); border: 1px solid var(--line);
+  border-radius: 6px; padding: 8px 10px; margin: 0; font-size: 0.9rem; }
+.unsure { background: var(--unsure-bg); color: var(--unsure-ink); border-radius: 4px; padding: 0 4px; font-weight: 600; }
+.unsure-list { margin: 10px 0 0; padding: 8px 12px; background: var(--unsure-bg); color: var(--unsure-ink); border-radius: 6px; }
+.unsure-list ul { margin: 4px 0 0; padding-left: 20px; }
+.arrows { color: var(--muted); font-size: 0.9rem; margin: 0 0 16px 16px; }
+.from { color: var(--muted); font-size: 0.9rem; margin: -4px 0 8px; }
+.arrows .loop { color: var(--accent); font-weight: 600; }
+h3 { font-size: 1rem; margin: 32px 0 8px; }
+.changes { padding-left: 20px; color: var(--muted); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<main id="map"></main>
+<script type="application/json" id="workflow">
+{
+  "title": "Chaplin at Keystone, 1914: the trade press's first year",
+  "question": "How did the American and British trade press place Charlie Chaplin during his first year at Keystone, 1914, and what did reviewers call him before they knew his name?",
+  "begun": "2026-11-11",
+  "steps": [
+    {
+      "n": 1,
+      "name": "Find trade-press pages",
+      "in": "The question",
+      "out": "Candidate pages, a reason for each",
+      "who": "Claude",
+      "check": {
+        "by": "me",
+        "how": "I read each reason and keep only pages that name Chaplin, Keystone, or a 1914 title."
+      },
+      "run": "Search the Lantern media history library (lantern.mediahist.org) for 1914 trade-press pages that mention Chaplin, Keystone, or this year's titles. List each page with its id, title, date, and one sentence on why it matters. Also read workflow/rounds/ for queries from a previous round.",
+      "state": "works",
+      "state_date": "2026-11-11",
+      "state_note": "Ran in Claude Code with the course scripts; not yet tried in Cowork. Kept 26 of 68 pages. Round 2, from step 6's queries, returned 169, many repeats.",
+      "you_or_it": "UNSURE",
+      "credited": "UNSURE",
+      "mine": false,
+      "unsure": [
+        "Is Claude a you or an it here, and who is credited? (Rob's Week 11 question, for you to answer.)"
+      ]
+    },
+    {
+      "n": 2,
+      "name": "Read the pages",
+      "in": "The pages I kept",
+      "out": "One text file per page",
+      "who": "Claude",
+      "check": {
+        "by": "a script",
+        "how": "Every kept page has a text file, and none is empty."
+      },
+      "run": "For each page I kept, fetch its full text from Lantern and save it as sources/pages/<page id>.md.",
+      "state": "works",
+      "state_date": "2026-11-11",
+      "state_note": "Ran in Claude Code with the course scripts; not yet tried in Cowork. 26 page texts.",
+      "you_or_it": "UNSURE",
+      "credited": "UNSURE",
+      "mine": false,
+      "unsure": [
+        "Is Claude a you or an it here, and who is credited? (Rob's Week 11 question, for you to answer.)"
+      ]
+    },
+    {
+      "n": 3,
+      "name": "Find secondary literature",
+      "in": "The question",
+      "out": "Works, a reason for each",
+      "who": "Claude",
+      "check": {
+        "by": "me",
+        "how": "I keep a work only if its reason holds up beyond its title."
+      },
+      "run": "Search OpenAlex for scholarship on Chaplin at Keystone and on early film comedy's reception. List each work with authors, year, and one sentence on why it matters, saying when the reason rests on the title alone.",
+      "state": "works",
+      "state_date": "2026-11-11",
+      "state_note": "Ran in Claude Code with the course scripts; not yet tried in Cowork. Kept 17 of 35 works. OpenAlex gave titles only, so every reason rested on the title.",
+      "you_or_it": "UNSURE",
+      "credited": "UNSURE",
+      "mine": false,
+      "unsure": [
+        "Is Claude a you or an it here, and who is credited? (Rob's Week 11 question, for you to answer.)"
+      ]
+    },
+    {
+      "n": 4,
+      "name": "Primary-material mapping",
+      "in": "The page texts",
+      "out": "A map of the primary material",
+      "who": "Claude",
+      "check": {
+        "by": "Claude",
+        "how": "Every film, date, and phrase on the map is quoted with a page id that, searched, contains it."
+      },
+      "run": "From sources/pages/, map each film, each date, and each phrase used of Chaplin, page by page, quoting each with its page id. Then check the map: search each quotation in its page and report anything that is not there.",
+      "state": "works",
+      "state_date": "2026-11-11",
+      "state_note": "Ran in Claude Code with the course scripts; not yet tried in Cowork. Failed its first check: two Keystone titles were tied to a page that names neither. The retry passed.",
+      "you_or_it": "UNSURE",
+      "credited": "UNSURE",
+      "mine": false,
+      "unsure": [
+        "Is Claude a you or an it here, and who is credited? (Rob's Week 11 question, for you to answer.)"
+      ]
+    },
+    {
+      "n": 5,
+      "name": "Concept mapping",
+      "in": "Both maps and the works list",
+      "out": "A concept map",
+      "who": "Claude",
+      "check": {
+        "by": "Claude",
+        "how": "Each concept is tied to a quotation in the pages or a work on the list, and the reading of it is right."
+      },
+      "run": "Name the concepts the reviewers use (type, personality, the tramp, Keystone's speed, knockabout) and the concepts the literature brings, and connect them. Split what you found into Observed and Not established.",
+      "state": "works",
+      "state_date": "2026-11-11",
+      "state_note": "Ran in Claude Code with the course scripts; not yet tried in Cowork. Passed, but its check asked only that citations resolve; three misreadings sat in its own Not established list.",
+      "you_or_it": "UNSURE",
+      "credited": "UNSURE",
+      "mine": false,
+      "unsure": [
+        "Is Claude a you or an it here, and who is credited? (Rob's Week 11 question, for you to answer.)"
+      ]
+    },
+    {
+      "n": 6,
+      "name": "New research",
+      "in": "Both maps",
+      "out": "New queries",
+      "who": "Claude",
+      "check": {
+        "by": "me",
+        "how": "I choose which queries go back to step 1."
+      },
+      "run": "From the two maps, list what is missing: films with no review, terms to search again, years to widen to. Save the ones I choose to workflow/rounds/.",
+      "state": "works",
+      "state_date": "2026-11-11",
+      "state_note": "Ran in Claude Code with the course scripts; not yet tried in Cowork. Kept 12 of 33 queries; they went back to step 1 as round 2.",
+      "you_or_it": "UNSURE",
+      "credited": "UNSURE",
+      "mine": false,
+      "unsure": [
+        "Is Claude a you or an it here, and who is credited? (Rob's Week 11 question, for you to answer.)"
+      ]
+    },
+    {
+      "n": 7,
+      "name": "Chapter planning",
+      "in": "Both maps",
+      "out": "A chapter outline with its argument",
+      "who": "me",
+      "check": {
+        "by": "me",
+        "how": "I commit to one trajectory through the material."
+      },
+      "run": "By hand.",
+      "state": "not tried",
+      "state_date": "",
+      "state_note": "",
+      "you_or_it": "UNSURE",
+      "credited": "UNSURE",
+      "mine": true,
+      "unsure": [
+        "Is Claude a you or an it here, and who is credited? (Rob's Week 11 question, for you to answer.)"
+      ]
+    }
+  ],
+  "arrows": [
+    {
+      "from": 1,
+      "to": 2,
+      "loop": false
+    },
+    {
+      "from": 2,
+      "to": 4,
+      "loop": false
+    },
+    {
+      "from": 3,
+      "to": 5,
+      "loop": false
+    },
+    {
+      "from": 4,
+      "to": 5,
+      "loop": false
+    },
+    {
+      "from": 4,
+      "to": 6,
+      "loop": false
+    },
+    {
+      "from": 5,
+      "to": 6,
+      "loop": false
+    },
+    {
+      "from": 6,
+      "to": 1,
+      "loop": true
+    },
+    {
+      "from": 4,
+      "to": 7,
+      "loop": false
+    },
+    {
+      "from": 5,
+      "to": 7,
+      "loop": false
+    }
+  ],
+  "changes": [
+    {
+      "date": "2026-11-14",
+      "what": "Mapped for Cowork from the 11 November reference run."
+    },
+    {
+      "date": "2026-11-11",
+      "what": "Workflow written after Rob King's drawing of his own process (Week 10, slide 1), on open sources."
+    }
+  ]
+}
+</script>
+<script>
+function esc(v) {
+  return String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function val(v) {
+  var s = esc(v);
+  return s.indexOf("UNSURE") === -1 ? s : s.replace(/UNSURE/g, '<span class="unsure">UNSURE</span>');
+}
+function list(v) { return v == null || v === "" ? [] : [].concat(v); }
+function key(v) { return String(v == null ? "" : v).trim(); }
+function isLoop(a, order) {
+  if (a.loop === true) return true;
+  var f = order[key(a.from)], t = order[key(a.to)];
+  return f !== undefined && t !== undefined && t <= f;
+}
+function arrowText(a, order) {
+  var mark = a.unsure === true ? ' <span class="unsure">UNSURE</span>' : '';
+  return (isLoop(a, order) ? '<span class="loop">&#8634; loops back to ' + val(a.to) + '</span>'
+    : '&darr; goes to ' + val(a.to)) + mark;
+}
+function renderWorkflow(d) {
+  var steps = list(d.steps), arrows = list(d.arrows), changes = list(d.changes), order = {};
+  steps.forEach(function (s, i) { order[key(s.n)] = i; });
+  var h = '<h1>' + val(d.title) + '</h1>';
+  h += '<p class="question">' + val(d.question) + '</p>';
+  h += '<p class="meta">Begun ' + esc(d.begun) + ' &middot; ' + steps.length + ' steps</p>';
+  steps.forEach(function (s) {
+    var state = s.state || "not tried";
+    var chk = typeof s.check === "string" ? {by: s.check} : (s.check || {});
+    var into = arrows.filter(function (a) { return key(a.to) === key(s.n); });
+    h += '<section class="step" id="step-' + esc(s.n) + '">';
+    h += '<h2><span class="num">' + esc(s.n) + '.</span> ' + val(s.name);
+    if (s.mine === true) h += ' <span class="badge mine">mine</span>';
+    h += ' <span class="badge state-' + esc(state).replace(/ /g, "-") + '">' + esc(state) + '</span></h2>';
+    if (into.length) h += '<p class="from">comes from ' + into.map(function (a) { return val(a.from); }).join(', ') + '</p>';
+    h += '<dl>';
+    h += '<dt>In</dt><dd>' + val(s.in) + '</dd>';
+    h += '<dt>Out</dt><dd>' + val(s.out) + '</dd>';
+    h += '<dt>Who does it</dt><dd>' + val(s.who) + '</dd>';
+    h += '<dt>Who checks it</dt><dd>' + val(chk.by) + (chk.how ? ': ' + val(chk.how) : '') + '</dd>';
+    h += '<dt>Run it in Cowork</dt><dd><pre>' + val(s.run) + '</pre></dd>';
+    h += '<dt>Last run</dt><dd>' + (s.state_date ? esc(s.state_date) + ': ' : '') + (val(s.state_note) || esc(state)) + '</dd>';
+    h += '<dt>Claude here is</dt><dd>' + (s.you_or_it === "you" ? 'a &ldquo;you&rdquo;' : s.you_or_it === "it" ? 'an &ldquo;it&rdquo;' : val(s.you_or_it)) + '</dd>';
+    h += '<dt>Credited</dt><dd>' + val(s.credited) + '</dd>';
+    h += '</dl>';
+    var doubts = list(s.unsure);
+    if (doubts.length) {
+      h += '<div class="unsure-list"><strong>Still UNSURE</strong><ul>';
+      doubts.forEach(function (u) { h += '<li>' + esc(u) + '</li>'; });
+      h += '</ul></div>';
+    }
+    h += '</section>';
+    var out = arrows.filter(function (a) { return key(a.from) === key(s.n); });
+    h += '<p class="arrows">' + (out.length ? out.map(function (a) { return arrowText(a, order); }).join(' &middot; ') : 'ends here') + '</p>';
+  });
+  var stray = arrows.filter(function (a) { return order[key(a.from)] === undefined || order[key(a.to)] === undefined; });
+  if (stray.length) {
+    h += '<div class="unsure-list"><strong>UNSURE arrows</strong> (a step they name is not on the map)<ul>';
+    stray.forEach(function (a) { h += '<li>' + esc(a.from) + ' to ' + esc(a.to) + '</li>'; });
+    h += '</ul></div>';
+  }
+  h += '<h3>Changes</h3><ul class="changes">';
+  changes.forEach(function (c) { h += '<li>' + esc(c && c.date) + ': ' + val(c && c.what) + '</li>'; });
+  h += '</ul>';
+  return h;
+}
+function loadWorkflow(text) {
+  try {
+    return renderWorkflow(JSON.parse(text));
+  } catch (e) {
+    return '<div class="unsure-list"><strong>The map\'s data has an error:</strong> ' + esc(e.message) +
+      '. Ask Claude to fix the JSON block.</div>';
+  }
+}
+if (typeof document !== "undefined" && document) {
+  var text = document.getElementById("workflow").textContent;
+  try { document.title = JSON.parse(text).title || "Workflow map"; } catch (e) {}
+  document.getElementById("map").innerHTML = loadWorkflow(text);
+}
+</script>
+</body>
+</html>

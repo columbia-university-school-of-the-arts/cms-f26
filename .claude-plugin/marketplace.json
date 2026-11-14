@@ -19,6 +19,11 @@
       "name": "cms-lab",
       "source": "./plugins/cms-lab",
       "description": "The CMS lab: run /cms-lab:init once to ready your machine, then projects such as the scene-detection workshop in ~/cms-lab."
+    },
+    {
+      "name": "cms-workflow",
+      "source": "./plugins/cms-workflow",
+      "description": "Map your research workflow as a page you keep: each step, who does it, who checks it, and how to run it in Cowork."
     }
   ]
 }
