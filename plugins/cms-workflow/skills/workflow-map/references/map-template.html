@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workflow map</title>
+<style>
+:root {
+  --bg: #fbfaf7; --card: #ffffff; --ink: #1d1d1b; --muted: #66645e; --line: #dedbd2;
+  --accent: #2f5d8a; --mine: #2e7d4f; --unsure-bg: #fff3c4; --unsure-ink: #6b4e00;
+  --works: #2e7d4f; --broken: #b3261e; --tried: #8a6d00; --nottried: #66645e;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161614; --card: #22221f; --ink: #ecebe6; --muted: #a3a199; --line: #3a3934;
+    --accent: #8ab4e0; --mine: #7fcf9c; --unsure-bg: #4a3d0c; --unsure-ink: #ffe28a;
+    --works: #7fcf9c; --broken: #ff8a80; --tried: #e6c65c; --nottried: #a3a199;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161614; --card: #22221f; --ink: #ecebe6; --muted: #a3a199; --line: #3a3934;
+  --accent: #8ab4e0; --mine: #7fcf9c; --unsure-bg: #4a3d0c; --unsure-ink: #ffe28a;
+  --works: #7fcf9c; --broken: #ff8a80; --tried: #e6c65c; --nottried: #a3a199;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  overflow-wrap: anywhere; }
+main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 1.6rem; line-height: 1.2; margin: 0 0 6px; }
+.question { font-size: 1.05rem; margin: 0 0 4px; }
+.meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 24px; }
+.step { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  padding: 14px 16px; margin: 0 0 6px; }
+.step h2 { font-size: 1.1rem; margin: 0 0 8px; display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+.num { color: var(--accent); font-variant-numeric: tabular-nums; }
+.badge { font-size: 0.75rem; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; }
+.badge.mine { color: var(--mine); }
+.state-works { color: var(--works); } .state-broken { color: var(--broken); }
+.state-tried { color: var(--tried); } .state-not-tried { color: var(--nottried); }
+dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 0; }
+dt { color: var(--muted); font-size: 0.9rem; }
+dd { margin: 0; }
+@media (max-width: 520px) { dl { grid-template-columns: minmax(0, 1fr); } dt { margin-top: 6px; } }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg); border: 1px solid var(--line);
+  border-radius: 6px; padding: 8px 10px; margin: 0; font-size: 0.9rem; }
+.unsure { background: var(--unsure-bg); color: var(--unsure-ink); border-radius: 4px; padding: 0 4px; font-weight: 600; }
+.unsure-list { margin: 10px 0 0; padding: 8px 12px; background: var(--unsure-bg); color: var(--unsure-ink); border-radius: 6px; }
+.unsure-list ul { margin: 4px 0 0; padding-left: 20px; }
+.arrows { color: var(--muted); font-size: 0.9rem; margin: 0 0 16px 16px; }
+.arrows .loop { color: var(--accent); font-weight: 600; }
+h3 { font-size: 1rem; margin: 32px 0 8px; }
+.changes { padding-left: 20px; color: var(--muted); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<main id="map"></main>
+<script type="application/json" id="workflow">
+{
+  "title": "My research workflow",
+  "question": "The research question, one line, from the thesis.",
+  "begun": "2026-11-18",
+  "steps": [
+    {
+      "n": 1,
+      "name": "First step",
+      "in": "What goes in",
+      "out": "What comes out",
+      "who": "me",
+      "check": {"by": "me", "how": "One sentence a person could follow."},
+      "run": "What I would ask Cowork, or: by hand.",
+      "state": "not tried",
+      "state_date": "",
+      "state_note": "",
+      "you_or_it": "UNSURE",
+      "credited": "UNSURE",
+      "mine": true,
+      "unsure": ["Is Claude a you or an it here, and who is credited?"]
+    },
+    {
+      "n": 2,
+      "name": "Second step",
+      "in": "What step 1 made",
+      "out": "What comes out",
+      "who": "Claude",
+      "check": {"by": "me", "how": "One sentence a person could follow."},
+      "run": "What I would ask Cowork.",
+      "state": "not tried",
+      "state_date": "",
+      "state_note": "",
+      "you_or_it": "UNSURE",
+      "credited": "UNSURE",
+      "mine": false,
+      "unsure": ["Is Claude a you or an it here, and who is credited?"]
+    }
+  ],
+  "arrows": [
+    {"from": 1, "to": 2, "loop": false},
+    {"from": 2, "to": 1, "loop": true}
+  ],
+  "changes": [
+    {"date": "2026-11-18", "what": "Map started."}
+  ]
+}
+</script>
+<script>
+function esc(v) {
+  return String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function val(v) {
+  var s = esc(v);
+  return s.indexOf("UNSURE") === -1 ? s : s.replace(/UNSURE/g, '<span class="unsure">UNSURE</span>');
+}
+function renderWorkflow(d) {
+  var steps = d.steps || [], arrows = d.arrows || [], changes = d.changes || [];
+  var h = '<h1>' + val(d.title) + '</h1>';
+  h += '<p class="question">' + val(d.question) + '</p>';
+  h += '<p class="meta">Begun ' + esc(d.begun) + ' &middot; ' + steps.length + ' steps</p>';
+  steps.forEach(function (s) {
+    var state = s.state || "not tried";
+    var chk = s.check || {};
+    h += '<section class="step" id="step-' + esc(s.n) + '">';
+    h += '<h2><span class="num">' + esc(s.n) + '.</span> ' + val(s.name);
+    if (s.mine) h += ' <span class="badge mine">mine</span>';
+    h += ' <span class="badge state-' + esc(state).replace(/ /g, "-") + '">' + esc(state) + '</span></h2>';
+    h += '<dl>';
+    h += '<dt>In</dt><dd>' + val(s.in) + '</dd>';
+    h += '<dt>Out</dt><dd>' + val(s.out) + '</dd>';
+    h += '<dt>Who does it</dt><dd>' + val(s.who) + '</dd>';
+    h += '<dt>Who checks it</dt><dd>' + val(chk.by) + (chk.how ? ': ' + val(chk.how) : '') + '</dd>';
+    h += '<dt>Run it in Cowork</dt><dd><pre>' + val(s.run) + '</pre></dd>';
+    h += '<dt>Last run</dt><dd>' + (s.state_date ? esc(s.state_date) + ': ' : '') + (val(s.state_note) || esc(state)) + '</dd>';
+    h += '<dt>Claude here is</dt><dd>' + (s.you_or_it === "you" ? 'a &ldquo;you&rdquo;' : s.you_or_it === "it" ? 'an &ldquo;it&rdquo;' : val(s.you_or_it)) + '</dd>';
+    h += '<dt>Credited</dt><dd>' + val(s.credited) + '</dd>';
+    h += '</dl>';
+    if (s.unsure && s.unsure.length) {
+      h += '<div class="unsure-list"><strong>Still UNSURE</strong><ul>';
+      s.unsure.forEach(function (u) { h += '<li>' + esc(u) + '</li>'; });
+      h += '</ul></div>';
+    }
+    h += '</section>';
+    var out = arrows.filter(function (a) { return a.from === s.n; });
+    if (out.length) {
+      h += '<p class="arrows">' + out.map(function (a) {
+        return a.loop ? '<span class="loop">&#8634; loops back to ' + esc(a.to) + '</span>' : '&darr; goes to ' + esc(a.to);
+      }).join(' &middot; ') + '</p>';
+    } else {
+      h += '<p class="arrows">ends here</p>';
+    }
+  });
+  h += '<h3>Changes</h3><ul class="changes">';
+  changes.forEach(function (c) { h += '<li>' + esc(c.date) + ': ' + val(c.what) + '</li>'; });
+  h += '</ul>';
+  return h;
+}
+if (typeof document !== "undefined" && document) {
+  var data = JSON.parse(document.getElementById("workflow").textContent);
+  document.title = data.title || "Workflow map";
+  document.getElementById("map").innerHTML = renderWorkflow(data);
+}
+</script>
+</body>
+</html>
