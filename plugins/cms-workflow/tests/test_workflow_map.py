@@ -5,7 +5,6 @@ PLUGIN = pathlib.Path(__file__).resolve().parents[1]
 HUB = PLUGIN.parents[1]
 SKILL = PLUGIN / "skills" / "workflow-map"
 TEMPLATE = SKILL / "references" / "map-template.html"
-EXAMPLE = SKILL / "references" / "example-chaplin.html"
 KEYS = {"title", "question", "begun", "steps", "arrows", "changes"}
 DATA_RE = re.compile(r'<script type="application/json" id="workflow">(.*?)</script>', re.S)
 
@@ -34,7 +33,7 @@ class PluginTest(unittest.TestCase):
     def test_manifest(self):
         m = json.loads((PLUGIN / ".claude-plugin" / "plugin.json").read_text())
         self.assertEqual(m["name"], "cms-workflow")
-        self.assertEqual(m["version"], "0.1.0")
+        self.assertEqual(m["version"], "0.1.1")
         self.assertEqual(m["skills"], ["./skills/workflow-map"])
         self.assertEqual(m["license"], "CC-BY-NC-SA-4.0")
 
@@ -160,27 +159,6 @@ class SkillRobustnessTest(unittest.TestCase):
         self.assertNotIn("__pycache__", out)
         self.assertIn("__pycache__/", (HUB / ".gitignore").read_text())
 
-
-class ExampleTest(unittest.TestCase):
-    NAMES = ["Find trade-press pages", "Read the pages", "Find secondary literature",
-             "Primary-material mapping", "Concept mapping", "New research", "Chapter planning"]
-    ARROWS = {(1, 2), (2, 4), (3, 5), (4, 5), (4, 6), (5, 6), (6, 1), (4, 7), (5, 7)}
-
-    def test_example_map(self):
-        d = data_of(EXAMPLE)
-        self.assertEqual([s["name"] for s in d["steps"]], self.NAMES)
-        self.assertEqual({(a["from"], a["to"]) for a in d["arrows"]}, self.ARROWS)
-        self.assertEqual([(a["from"], a["to"]) for a in d["arrows"] if a["loop"]], [(6, 1)])
-        last = d["steps"][6]
-        self.assertEqual(last["who"], "me")
-        self.assertTrue(last["mine"])
-        self.assertEqual(renderer_of(EXAMPLE), renderer_of(TEMPLATE))
-        names = {s["n"] for s in d["steps"]}
-        for a in d["arrows"]:
-            self.assertIn(a["from"], names)
-            self.assertIn(a["to"], names)
-        for s in d["steps"][:6]:
-            self.assertIn("not yet tried in Cowork", s["state_note"])
 
 
 if __name__ == "__main__":
