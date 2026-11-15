@@ -92,9 +92,7 @@ and write `<\/` wherever a string contains `</`, so that a student's
 
 Start from `references/map-template.html` in this skill. Replace only the
 JSON block, keep everything else exactly as it is, and publish the result as
-an artifact. `references/example-chaplin.html` is a finished example, Rob
-King's own research process rebuilt on open sources; show it when the student
-asks what a map looks like. Then go through every `UNSURE` with the student,
+an artifact. Then go through every `UNSURE` with the student,
 one step at a time.
 
 ## Changing the map
