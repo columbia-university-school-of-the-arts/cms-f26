@@ -39,18 +39,9 @@ h3 { font-size: 12px; margin: 14px 0 6px; text-transform: uppercase; letter-spac
 .btn.danger { border-color: var(--bad); color: var(--bad); background: transparent; margin-top: 14px; }
 .btn-save { background: var(--accent); color: #fff; border-color: var(--accent); }
 .status { font-size: 12px; color: var(--faint); } .status.dirty { color: var(--warn); font-weight: 600; }
-.git-label { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
-.git-status { font-size: 12px; color: var(--muted); }
-.git-status.st-behind, .git-status.st-diverged { color: var(--warn); font-weight: 600; }
-.commit-msg { font: inherit; font-size: 13px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 7px;
   background: var(--surface); color: var(--text); width: 220px; max-width: 100%; }
-.banner, .problems, .git-choice { margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--warn);
   background: color-mix(in srgb, var(--warn) 9%, var(--surface)); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .problems { display: block; } .problems ul { margin: 4px 0 0 18px; padding: 0; }
-.git-choice { display: block; border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
-.git-choice .sides { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 8px 0; }
-.git-choice .side { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
-.git-choice ul { margin: 0 0 8px 16px; padding: 0; font-size: 12px; }
 [hidden] { display: none !important; }
 .main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 14px; align-items: start; }
 .main:has(.panel[hidden]) { grid-template-columns: minmax(0, 1fr); }
@@ -122,19 +113,38 @@ svg.canvas { display: block; touch-action: none; user-select: none; font-family:
 .mini-log li, .log li { padding: 3px 0; border-top: 1px solid var(--border); }
 .log { margin-top: 14px; } .log h2 { margin-bottom: 6px; }
 .log .date { color: var(--faint); font-variant-numeric: tabular-nums; margin-right: 6px; }
-.log li.uncommitted { border-left: 3px solid var(--warn); padding-left: 6px; }
 .hint { color: var(--faint); font-size: 12.5px; margin: 6px 0 0; }
 .error { padding: 24px; border: 1px solid var(--bad); border-radius: 10px; background: var(--surface); }
 .toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%) translateY(20px); opacity: 0; pointer-events: none;
   background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px; transition: all .25s; max-width: calc(100vw - 32px); }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .offscreen { position: fixed; left: -9999px; }
+.modes .btn[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+.is-view .edit-only, .is-edit .view-only { display: none !important; }
+.is-view .card { cursor: pointer; }
+.round-select { font: inherit; font-size: 13px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text); }
+.runs-pill rect { fill: var(--lane); } .runs-pill text { fill: #fff; font-size: 9.5px; font-weight: 700; text-anchor: middle; }
+.fact { margin: 8px 0 0; } .fact > span { display: block; font-size: 11.5px; color: var(--muted); } .fact p { margin: 1px 0 0; }
+.panel-head .row { display: flex; gap: 6px; }
+.did .round { border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; margin: 6px 0; }
+.did .round.current { border-color: var(--accent); }
+.did .round-head { font-size: 11.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.pass { border-left: 3px solid var(--faint); padding: 4px 0 4px 8px; margin-top: 6px; }
+.pass.p-works { border-color: var(--ok); } .pass.p-broken { border-color: var(--bad); } .pass.p-tried { border-color: var(--accent); }
+.pass-head { display: flex; gap: 8px; align-items: center; font-size: 12.5px; }
+.pass-head .mark { width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 10px; background: var(--faint); }
+.p-works .mark { background: var(--ok); } .p-broken .mark { background: var(--bad); } .p-tried .mark { background: var(--accent); }
+.pass-head .date { color: var(--faint); } .pass-head .res { margin-left: auto; color: var(--muted); }
+.pass p { margin: 3px 0 0; font-size: 12.5px; } .pass .chk { color: var(--muted); }
+.pass .outs { margin: 3px 0 0 16px; padding: 0; font-size: 12px; }
+.record textarea, .record select { font: inherit; font-size: 13px; width: 100%; margin-top: 6px; padding: 5px 7px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
+.record .row input, .record .row select { flex: 1; margin-top: 6px; }
+.record > input { margin-top: 6px; }
 @media (max-width: 860px) {
   #app { padding: 12px 16px; }
   .main { grid-template-columns: minmax(0, 1fr); }
   .panel { position: static; max-height: none; }
   .group + .group { padding-left: 0; border-left: 0; }
   .trace-row { grid-template-columns: 22px 1fr; } .t-out, .t-check { grid-column: 2; }
-  .git-choice .sides { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { .card.hit .card-flash { animation: none; } .pill, .badge, .toast { transition: none; } }

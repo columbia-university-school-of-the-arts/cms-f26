@@ -1,6 +1,6 @@
 ---
 name: interactive-map
-description: "Use when a student wants to make, open, change, or record a run on an interactive map of a workflow: their research process from a Week 10 drawing, Claude's reading of it, a workflow.md, an existing workflow map, or a description of any other kind of work (editing, publishing, anything they draw). Makes a page in swimlanes with their sources, steps, and checks, a walkthrough they play, and pull, commit, and push to their fleet repository. Also use when they ask to change how the map page looks or works, or to add an icon for a service."
+description: "Use when a student wants to make, open, change, or record a run on an interactive map of a workflow: their research process from a Week 10 drawing, Claude's reading of it, a workflow.md, an existing workflow map, or a description of any other kind of work (editing, publishing, anything they draw). Makes a page in swimlanes with their sources, steps, and checks, a walkthrough they play, and a copy saved into their fleet repository's folder. Also use when they ask to change how the map page looks or works, or to add an icon for a service."
 ---
 
 # Your workflow, as a page you work on
@@ -12,11 +12,18 @@ it in Cowork. It is drawn in swimlanes, one lane for each kind of worker
 The student plays a walkthrough to watch data move from the sources through
 every step, and reads each step's check in a debug trace.
 
+The page opens in **View** mode: each card shows how many times it has run,
+opening a card shows **What it did** on every run (each pass through a loop
+kept separately, with its outputs, note, and check), and **Play** replays the
+real runs in order. **Edit** mode is where the workflow changes: drag cards,
+change fields, add steps, sources, and lanes. The student looks first and
+decides when to edit.
+
 The student owns the page. They edit it on the page itself and press
 **Save**, and they can ask you in the chat to change the workflow or the
-page. With GitHub connected, they **Pull**, **Commit**, and **Push** it to
-their fleet repository, in Git's terms. They can keep several maps, one for
-each workflow and project.
+page. When they ask, you save the map's files into their fleet repository's
+folder, and they commit, push, and open a pull request themselves, in the
+terminal. They can keep several maps, one for each workflow and project.
 
 Nothing runs on the page. Steps run in Cowork, by the student or with you,
 and the student records each run on the map.
@@ -96,10 +103,15 @@ The page keeps the whole workflow in one JSON block,
   Keep every arrow in the drawing, loops included.
 - `changes`: the change log, newest first, each `{"date", "what"}`.
 - `icons`: icons fetched for this map (see "Icons").
-- `git`: kept by the page (`pulled`, `committed`, `pending`). Copy it as it
-  is; never edit it by hand.
-- `connector`: only when the GitHub connector's names differ from the
-  defaults (see "Publishing").
+- `runs`: what each step did, oldest first, each `{"id", "date", "step",
+  "round", "pass", "result", "note", "outputs", "check"}`. `result` is
+  `works`, `broken`, or `tried`; `outputs` lists file paths in the fleet
+  repository; `check` is `{"by", "result", "note"}` with `result` one of
+  `pass`, `fail`, `not checked`. `pass` counts the step's runs within the
+  round, so a step a loop sends back to runs as pass 1, pass 2, and so on.
+  Never rewrite or drop a run; a wrong one is corrected by a later run.
+- `round`: the current round, a whole run of the workflow from the start.
+  The student starts the next with **New round** in View mode.
 
 The block must stay valid JSON, or the page shows an error in place of the
 map: escape double quotes inside strings as `\"`, leave no trailing commas,
@@ -152,28 +164,22 @@ JSON block and the `<title>` text; keep everything else exactly as it is.
 Name the artifact with the map's title, so a student with several maps can
 tell them apart.
 
-**Publishing.** Publish the page as the student's own artifact, with these
-capabilities when your artifact tool accepts them:
+**Publishing.** Publish the page as the student's own artifact with the
+capability `artifact: {}`, when your artifact tool accepts it, so the page can
+save itself. Declare nothing else: the page does not use connectors.
 
-- `artifact: {}`, so the page can save itself;
-- when `repo` is set and the student's GitHub connector is on in this chat,
-  `mcp` with the GitHub connector: `{"servers": [{"server": "<the connector's
-  name>", "tools": ["get_file_contents", "push_files", "list_commits"]}]}`.
-  Check those three tool names against the GitHub tools you can see. If the
-  connector's name or tools differ, use the real ones in the declaration and
-  record them in the data as
-  `"connector": {"server": "...", "tools": {"read": "...", "write": "...", "head": "..."}}`.
-
-If the publish refuses the capabilities, publish without them and tell the
+If the publish refuses the capability, publish without it and tell the
 student in one line that this page cannot save itself yet; they keep changes
 by pressing **Copy the map** and pasting into the chat. Never fall back to
 the `cms-workflow` template.
 
-**Then tell the student, briefly:** edit on the page and press **Save** (or
-Cmd or Ctrl + S); every save reloads the page. Press **Play** or **Step** to
-watch the walkthrough. With GitHub connected, **Commit** records the change
-on the page and **Push** sends it to the repository; **Pull** first if the
-page says the repository has newer commits. Then go through every `UNSURE`
+**Then tell the student, briefly:** the page opens in **View**: open a card
+to see what it did, and record each run there. Switch to **Edit** to change
+the workflow. Press **Save** (or Cmd or Ctrl + S) to keep any change; every
+save reloads the page. Press **Play** or **Step** to
+watch the walkthrough. To keep a copy in the repository, they ask you to save
+the map to their fleet folder, then commit and push it themselves. Then go
+through every `UNSURE`
 with them, one step at a time.
 
 ## Changing the map or the page in the chat
@@ -191,11 +197,16 @@ with them, one step at a time.
   itself reads like "page: wider Claude lane".
 - Never drop a step, a source, an arrow, a lane, or a change log line unless
   the student asks.
-- Recording a run sets `state`, `state_date`, and `state_note`. With the
-  fleet folder attached, also append one line to `workflow/<id>/runs.jsonl`:
-  `{"date": "YYYY-MM-DD", "step": "<n>", "result": "works" or "broken",
-  "note": "...", "outputs": ["<path>"], "check": {"by": "...", "result":
-  "pass", "fail", or "not checked", "note": "..."}}`.
+- **Recording a run** adds one entry to `runs`: `round` is the map's
+  `round`, `pass` is one more than the step's runs already in that round,
+  `id` is `run-` and the next unused number. Ask the student what it made
+  (`outputs`), how it went (`result`, `note`), and whether it was checked,
+  by whom, and what the check found. Then set the step's `state`,
+  `state_date`, and `state_note` to the run's, and add a change log line
+  like "ran step 2 (pass 2): works, re-tagged with intertitles". With the
+  fleet folder attached, also append the run to `workflow/<id>/runs.jsonl`
+  as one line:
+  `{"date", "step", "round", "pass", "result", "note", "outputs", "check"}`.
 
 **Changing how the page looks or works.** The page's code is in the
 `<style data-wf>` and `<script data-wf>` elements. Edit inside them. Keep:
@@ -205,7 +216,7 @@ with them, one step at a time.
   on the next save);
 - the JSON block, the empty `<div id="app"></div>`, and the order: title,
   styles, JSON block, app, scripts;
-- the save and Git code in `WF.rebuild`, `WF.push`, and `WF.pull`;
+- the save code in `WF.rebuild` and `WF.serializeData`;
 - no `src=`, `href="http`, `@import`, or `url(http`: the page loads nothing
   from the network;
 - no `</script>` inside a script: write `<\/script>`.
@@ -215,12 +226,26 @@ made.
 
 ## Saving a copy in the repository
 
-With GitHub connected, the page does this: **Commit** and **Push** write
-`workflow/<id>/map.md` (the JSON, fenced as `json`, under `## <title>`) and
-`workflow/<id>/map.html` (the whole page).
+The page saves itself; it never writes to the repository. When the student
+asks ("Save my map to my fleet folder"), with the fleet folder attached:
 
-Without the connector, and with the fleet folder attached, write the same two
-files at the end of a working session; the student commits and pushes them
-from the terminal. With no folder attached, give the student the whole JSON
-block, fenced, in the chat, and tell them to keep it: it is what they paste to
-continue in a later chat.
+1. Start from the page's current data, as above: read the live page, or ask
+   the student to press **Copy the map** and paste it.
+2. Write three files into `workflow/<id>/`: `map.md` (the JSON, fenced as
+   `json`, under `## <title>`), `map.html` (the whole page as published,
+   with that data in its JSON block), and `runs.jsonl` (one line per run, as
+   above) once any run is recorded.
+3. Tell the student the commands to run themselves, in the terminal (Cowork's
+   sandbox cannot push):
+
+       cd ~/cms-f26-fleet-<username>
+       git add workflow/<id>/
+       git commit -m "<what changed>"
+       git push
+
+   and, if they work on a branch, to open a pull request on GitHub. Never
+   commit or push for them.
+
+With no folder attached, give the student the whole JSON block, fenced, in the
+chat, and tell them to keep it: it is what they paste to continue in a later
+chat or save to the folder later.
