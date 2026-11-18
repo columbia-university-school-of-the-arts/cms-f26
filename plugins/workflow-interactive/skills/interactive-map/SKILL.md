@@ -134,7 +134,8 @@ the name you give the card's `icon`. Try, in order:
    `https://registry.npmjs.org/lucide-static/-/lucide-static-1.66.0.tgz`
    (`package/icons/<name>.svg`). Add the elements inside its `<svg>` as
    `"<name>": {"svg": "<the elements>", "source": "lucide 1.66.0", "license": "ISC"}`.
-   The page refuses an `svg` with scripts, links, images, or event handlers.
+   The page keeps only `path`, `circle`, `rect`, `line`, `polyline`, `polygon`,
+   and `ellipse` elements and their geometry; anything else is dropped.
 3. **The student's own SVG**, when neither has it (Simple Icons drops some
    brands at their owners' request): ask them for the logo as SVG, for example
    from the service's press page, keep one path scaled to 24 by 24, and record

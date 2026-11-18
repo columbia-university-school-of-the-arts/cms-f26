@@ -455,6 +455,23 @@ class CustomIconTest(unittest.TestCase):
         out = self.icon({"svg": '<image href="x" onload="alert(1)"/>'})
         self.assertNotIn("onload", out)
 
+    def test_svg_is_rebuilt_from_an_allow_list(self):
+        evil = ('<use href="data:x"/><style>*{x:url(javascript:1)}</style>'
+                '<animate attributeName="href" to="javascript:1"/><set attributeName="onclick" to="x"/>'
+                '<path d="M4 4L20 20" onclick="x" style="fill:url(javascript:1)"/>'
+                '<circle cx="12" cy="12" r="javascript:1"/>')
+        out = run_js("WF.safeSvg(" + J(evil) + ")", (REF / "render.js").read_text())
+        self.assertEqual(out, '<path d="M4 4L20 20"/><circle cx="12" cy="12"/>')
+        self.assertNotIn("javascript", out)
+
+    def test_lucide_icons_survive_the_allow_list(self):
+        text = (REF / "icons.js").read_text()
+        icons = json.loads(text[text.index("{"):text.rindex("}") + 1])
+        for name in ("film", "book-open", "chart-column", "mic"):
+            svg = icons["generic"][name]["svg"]
+            out = run_js("WF.safeSvg(" + J(svg) + ")", (REF / "render.js").read_text())
+            self.assertEqual(out.count("<"), len(re.findall(r"<(path|circle|rect|line|polyline|polygon|ellipse)\b", svg)), name)
+
     def test_bad_colour_is_ignored(self):
         self.assertNotIn("javascript", self.icon({"path": "M0 0", "color": "javascript:x"}))
 

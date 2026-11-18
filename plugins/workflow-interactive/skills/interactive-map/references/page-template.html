@@ -880,11 +880,31 @@ var WF = (function () {
     return { nodes: nodes, width: Math.max(maxX + 80, 640), height: model.lanes.length * G.lane, g: G };
   }
 
+  /* A fetched icon is rebuilt from an allow list: only these shapes, only
+     geometry attributes, values limited to numbers and path letters. Anything
+     else in the string is dropped, never passed through. */
+  var SHAPES = ["path", "circle", "rect", "line", "polyline", "polygon", "ellipse"];
+  var GEOMETRY = ["d", "cx", "cy", "r", "rx", "ry", "x", "y", "x1", "y1", "x2", "y2", "width", "height", "points"];
+  function safeSvg(text) {
+    var out = [], el = /<\s*([a-zA-Z]+)\b([^<>]*?)\/?\s*>/g, m;
+    while ((m = el.exec(String(text)))) {
+      var tag = m[1].toLowerCase();
+      if (SHAPES.indexOf(tag) < 0) continue;
+      var attrs = [], at = /([a-zA-Z0-9-]+)\s*=\s*"([^"]*)"/g, a;
+      while ((a = at.exec(m[2]))) {
+        var name = a[1].toLowerCase(), value = a[2];
+        if (GEOMETRY.indexOf(name) >= 0 && /^[0-9eE.,\s+\-MmLlHhVvCcSsQqTtAaZz]*$/.test(value)) attrs.push(name + '="' + value + '"');
+      }
+      if (attrs.length) out.push("<" + tag + " " + attrs.join(" ") + "/>");
+    }
+    return out.join("");
+  }
+
   function iconMarkup(model, name, x, y, size, color) {
     var custom = model.icons && model.icons[name];
     var brand = WF_ICONS.brand[name], generic = WF_ICONS.generic[name];
     if (custom && custom.path) brand = { path: custom.path, color: /^#[0-9a-fA-F]{3,8}$/.test(custom.color || "") ? custom.color : color };
-    else if (custom && typeof custom.svg === "string" && !/<\s*(script|foreignObject|image|a)\b|\son\w+\s*=|javascript:/i.test(custom.svg)) generic = { svg: custom.svg };
+    else if (custom && typeof custom.svg === "string") { var safe = safeSvg(custom.svg); if (safe) generic = { svg: safe }; }
     if (brand) {
       var k = size / 24, r = size / 2 + 5;
       return '<g class="ico brand"><circle cx="' + (x + size / 2) + '" cy="' + (y + size / 2) + '" r="' + r +
@@ -993,6 +1013,7 @@ var WF = (function () {
   WF.renderSvg = renderSvg;
   WF.edgePath = edgePath;
   WF.iconMarkup = iconMarkup;
+  WF.safeSvg = safeSvg;
 })(WF);
 </script><script data-wf>/* The page in the browser: editing, the walkthrough, the trace, saving, and Git.
    Runs only where there is a document. Keep the page's own code in elements
