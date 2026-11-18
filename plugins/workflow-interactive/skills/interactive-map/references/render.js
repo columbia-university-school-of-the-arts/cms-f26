@@ -155,6 +155,7 @@
       out.push(iconMarkup(model, icon, x + S / 2 - 15, y + S / 2 - 15, 30, c));
       if (!isSource) out.push('<circle class="port in" cx="' + x + '" cy="' + (y + S / 2) + '" r="4.5"/>');
       out.push('<circle class="port out" cx="' + (x + S) + '" cy="' + (y + S / 2) + '" r="4.5"/>');
+      out.push('<circle class="port-hit" cx="' + (x + S) + '" cy="' + (y + S / 2) + '" r="12"><title>Drag to another card to add an arrow</title></circle>');
       if (extra.state) out.push('<circle class="state s-' + extra.state.replace(/\s/g, "-") + '" cx="' + (x + 8) + '" cy="' + (y + S - 8) + '" r="4"/>');
       if (extra.runs) out.push('<g class="runs-pill"><rect x="' + (x + S - 20) + '" y="' + (y + S - 9) + '" width="28" height="15" rx="7.5"/>' +
         '<text x="' + (x + S - 6) + '" y="' + (y + S + 2) + '">\u00d7' + extra.runs + "</text></g>");

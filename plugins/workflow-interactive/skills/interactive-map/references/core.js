@@ -625,6 +625,22 @@ var WF = (function () {
     return { model: m, done: done, failed: failed };
   }
 
+  /* Dragging from one card's out port to another card. An arrow to a step at
+     or before the one it leaves, in the walkthrough's order, is a loop. */
+  function connect(model, from, to, date) {
+    var m = normalize(clone(stripInternal(model))), f = str(from), t = str(to);
+    function refuse(why) { return { model: m, done: [], failed: [{ change: { op: "connect", from: f, to: t }, why: why }] }; }
+    if (f === t) return refuse("an arrow cannot join a step to itself");
+    if (sourceRef(m, t) && !stepRef(m, t)) return refuse("an arrow cannot end at a source; sources only feed steps");
+    var seq = order(m), loop = !sourceRef(m, f) && seq.indexOf(t) >= 0 && seq.indexOf(t) <= seq.indexOf(f);
+    var r = applyChanges(m, [{ op: "add_arrow", from: f, to: t, loop: loop }], date);
+    if (loop && r.done.length) {
+      r.done[0] = "added a loop arrow from " + f + " back to " + t;
+      r.model.changes[0].what = r.done[0];
+    }
+    return r;
+  }
+
   function readReply(v) {
     if (Array.isArray(v)) return { reply: "", changes: v.filter(isObj) };
     if (typeof v === "string") return { reply: v, changes: [] };
@@ -716,7 +732,7 @@ var WF = (function () {
     order: order, walk: walk, trace: trace, rebuild: rebuild, paths: paths, mapMd: mapMd, mapFromMd: mapFromMd,
     recordRun: recordRun, newRound: newRound, runsFor: runsFor, rounds: rounds, runEvents: runEvents,
     runTrace: runTrace, runsJsonl: runsJsonl, today: today, stripInternal: stripInternal,
-    applyChanges: applyChanges, readReply: readReply, chatTurns: chatTurns, nextStepNumber: nextStepNumber
+    applyChanges: applyChanges, connect: connect, readReply: readReply, chatTurns: chatTurns, nextStepNumber: nextStepNumber
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   return api;

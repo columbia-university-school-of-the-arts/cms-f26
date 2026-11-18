@@ -168,6 +168,11 @@ svg.canvas { display: block; touch-action: none; user-select: none; font-family:
 .btn-go.stop { border-color: var(--bad); }
 .btn.mic.listening { border-color: var(--bad); background: var(--bad); color: #fff; }
 .chat-cost { margin: 6px 0 0; color: var(--faint); font-size: 12px; }
+.port-hit { fill: transparent; pointer-events: none; }
+.is-edit .port-hit { pointer-events: all; cursor: crosshair; }
+.is-edit .card:hover .port.out, .card.connect-from .port.out { r: 6.5; fill: var(--accent); stroke: var(--accent); }
+.connect-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 6 4; pointer-events: none; }
+.card.connect-target .card-body { stroke: var(--accent); stroke-width: 3; }
 </style><script type="application/json" id="workflow">{
   "title": "Close reading of archival TV",
   "question": "How did local news in 1970s New York frame the city's fiscal crisis?",
@@ -1159,6 +1164,22 @@ var WF = (function () {
     return { model: m, done: done, failed: failed };
   }
 
+  /* Dragging from one card's out port to another card. An arrow to a step at
+     or before the one it leaves, in the walkthrough's order, is a loop. */
+  function connect(model, from, to, date) {
+    var m = normalize(clone(stripInternal(model))), f = str(from), t = str(to);
+    function refuse(why) { return { model: m, done: [], failed: [{ change: { op: "connect", from: f, to: t }, why: why }] }; }
+    if (f === t) return refuse("an arrow cannot join a step to itself");
+    if (sourceRef(m, t) && !stepRef(m, t)) return refuse("an arrow cannot end at a source; sources only feed steps");
+    var seq = order(m), loop = !sourceRef(m, f) && seq.indexOf(t) >= 0 && seq.indexOf(t) <= seq.indexOf(f);
+    var r = applyChanges(m, [{ op: "add_arrow", from: f, to: t, loop: loop }], date);
+    if (loop && r.done.length) {
+      r.done[0] = "added a loop arrow from " + f + " back to " + t;
+      r.model.changes[0].what = r.done[0];
+    }
+    return r;
+  }
+
   function readReply(v) {
     if (Array.isArray(v)) return { reply: "", changes: v.filter(isObj) };
     if (typeof v === "string") return { reply: v, changes: [] };
@@ -1250,7 +1271,7 @@ var WF = (function () {
     order: order, walk: walk, trace: trace, rebuild: rebuild, paths: paths, mapMd: mapMd, mapFromMd: mapFromMd,
     recordRun: recordRun, newRound: newRound, runsFor: runsFor, rounds: rounds, runEvents: runEvents,
     runTrace: runTrace, runsJsonl: runsJsonl, today: today, stripInternal: stripInternal,
-    applyChanges: applyChanges, readReply: readReply, chatTurns: chatTurns, nextStepNumber: nextStepNumber
+    applyChanges: applyChanges, connect: connect, readReply: readReply, chatTurns: chatTurns, nextStepNumber: nextStepNumber
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   return api;
@@ -1412,6 +1433,7 @@ var WF = (function () {
       out.push(iconMarkup(model, icon, x + S / 2 - 15, y + S / 2 - 15, 30, c));
       if (!isSource) out.push('<circle class="port in" cx="' + x + '" cy="' + (y + S / 2) + '" r="4.5"/>');
       out.push('<circle class="port out" cx="' + (x + S) + '" cy="' + (y + S / 2) + '" r="4.5"/>');
+      out.push('<circle class="port-hit" cx="' + (x + S) + '" cy="' + (y + S / 2) + '" r="12"><title>Drag to another card to add an arrow</title></circle>');
       if (extra.state) out.push('<circle class="state s-' + extra.state.replace(/\s/g, "-") + '" cx="' + (x + 8) + '" cy="' + (y + S - 8) + '" r="4"/>');
       if (extra.runs) out.push('<g class="runs-pill"><rect x="' + (x + S - 20) + '" y="' + (y + S - 9) + '" width="28" height="15" rx="7.5"/>' +
         '<text x="' + (x + S - 6) + '" y="' + (y + S + 2) + '">\u00d7' + extra.runs + "</text></g>");
@@ -1709,7 +1731,72 @@ var WF = (function () {
     var r = svg.getBoundingClientRect();
     return { x: (e.clientX - r.left) * (L.width / r.width), y: (e.clientY - r.top) * (L.height / r.height) };
   }
+  /* ---------- drag from a card's out port to another card: a new arrow ---------- */
+  var link = null;
+  function cardAt(x, y) {
+    var el = document.elementFromPoint(x, y);
+    var g = el && el.closest && el.closest(".card");
+    return g && wrapEl.contains(g) ? g : null;
+  }
+  function startLink(e, g) {
+    e.preventDefault();
+    e.stopPropagation();
+    var svg = wrapEl.querySelector("svg"), from = g.getAttribute("data-node"), n = L.nodes[from];
+    var x0 = n.x + L.g.card, y0 = n.y + L.g.card / 2;
+    var line = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    line.setAttribute("class", "connect-line");
+    line.setAttribute("d", "M" + x0 + " " + y0 + "L" + x0 + " " + y0);
+    svg.appendChild(line);
+    g.classList.add("connect-from");
+    link = { from: from, svg: svg, line: line, x0: x0, y0: y0, target: null, id: e.pointerId };
+    svg.setPointerCapture(e.pointerId);
+    svg.addEventListener("pointermove", onLinkMove);
+    svg.addEventListener("pointerup", onLinkUp);
+    svg.addEventListener("pointercancel", endLink);
+  }
+  function onLinkMove(e) {
+    if (!link) return;
+    var p = svgPoint(link.svg, e), dx = Math.max(40, Math.abs(p.x - link.x0) / 2);
+    link.line.setAttribute("d", "M" + link.x0 + " " + link.y0 + "C" + (link.x0 + dx) + " " + link.y0 + " " +
+      (p.x - dx) + " " + p.y + " " + p.x + " " + p.y);
+    var g = cardAt(e.clientX, e.clientY), id = g && g.getAttribute("data-node");
+    var ok = g && id !== link.from && id.indexOf("src-") !== 0 ? g : null;
+    if (ok !== link.target) {
+      if (link.target) link.target.classList.remove("connect-target");
+      link.target = ok;
+      if (ok) ok.classList.add("connect-target");
+    }
+  }
+  function endLink() {
+    if (!link) return;
+    var l = link;
+    link = null;
+    l.svg.removeEventListener("pointermove", onLinkMove);
+    l.svg.removeEventListener("pointerup", onLinkUp);
+    l.svg.removeEventListener("pointercancel", endLink);
+    try { l.svg.releasePointerCapture(l.id); } catch (e) { /* none */ }
+    l.line.remove();
+    wrapEl.querySelectorAll(".connect-from, .connect-target").forEach(function (g) { g.classList.remove("connect-from", "connect-target"); });
+  }
+  function onLinkUp(e) {
+    if (!link) return;
+    var from = link.from, g = cardAt(e.clientX, e.clientY), to = g && g.getAttribute("data-node");
+    endLink();
+    if (!to || to === from) return;
+    flushEdits();
+    var r = WF.connect(M(), from, to);
+    if (!r.done.length) { toast("No arrow added: " + r.failed[0].why + "."); return; }
+    S.model = r.model;
+    S.dirty = true;
+    afterChange();
+    toast(r.done[0].charAt(0).toUpperCase() + r.done[0].slice(1) + ". Press Save to keep it.");
+  }
+
   function onPointerDown(e) {
+    if (e.target.closest && e.target.closest(".port-hit") && S.mode === "edit" && !S.readOnly) {
+      startLink(e, e.target.closest(".card"));
+      return;
+    }
     var g = e.target.closest && e.target.closest(".card");
     if (!g) return;
     var svg = wrapEl.querySelector("svg"), id = g.getAttribute("data-node"), p = svgPoint(svg, e);
@@ -2420,6 +2507,7 @@ var WF = (function () {
 
   document.addEventListener("keydown", function (e) {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") { e.preventDefault(); save(); }
+    if (e.key === "Escape" && link) { endLink(); return; }
     if (e.key === "Escape" && S.selected) select(null);
   });
   window.addEventListener("beforeunload", function (e) {
