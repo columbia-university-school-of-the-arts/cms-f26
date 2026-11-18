@@ -129,6 +129,27 @@ svg.canvas { display: block; touch-action: none; user-select: none; font-family:
   background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px; transition: all .25s; max-width: calc(100vw - 32px); }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .offscreen { position: fixed; left: -9999px; }
+.modes .btn[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+.is-view .edit-only, .is-edit .view-only { display: none !important; }
+.is-view .card { cursor: pointer; }
+.round-select { font: inherit; font-size: 13px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text); }
+.runs-pill rect { fill: var(--lane); } .runs-pill text { fill: #fff; font-size: 9.5px; font-weight: 700; text-anchor: middle; }
+.fact { margin: 8px 0 0; } .fact > span { display: block; font-size: 11.5px; color: var(--muted); } .fact p { margin: 1px 0 0; }
+.panel-head .row { display: flex; gap: 6px; }
+.did .round { border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; margin: 6px 0; }
+.did .round.current { border-color: var(--accent); }
+.did .round-head { font-size: 11.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.pass { border-left: 3px solid var(--faint); padding: 4px 0 4px 8px; margin-top: 6px; }
+.pass.p-works { border-color: var(--ok); } .pass.p-broken { border-color: var(--bad); } .pass.p-tried { border-color: var(--accent); }
+.pass-head { display: flex; gap: 8px; align-items: center; font-size: 12.5px; }
+.pass-head .mark { width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 10px; background: var(--faint); }
+.p-works .mark { background: var(--ok); } .p-broken .mark { background: var(--bad); } .p-tried .mark { background: var(--accent); }
+.pass-head .date { color: var(--faint); } .pass-head .res { margin-left: auto; color: var(--muted); }
+.pass p { margin: 3px 0 0; font-size: 12.5px; } .pass .chk { color: var(--muted); }
+.pass .outs { margin: 3px 0 0 16px; padding: 0; font-size: 12px; }
+.record textarea, .record select { font: inherit; font-size: 13px; width: 100%; margin-top: 6px; padding: 5px 7px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
+.record .row input, .record .row select { flex: 1; margin-top: 6px; }
+.record > input { margin-top: 6px; }
 @media (max-width: 860px) {
   #app { padding: 12px 16px; }
   .main { grid-template-columns: minmax(0, 1fr); }

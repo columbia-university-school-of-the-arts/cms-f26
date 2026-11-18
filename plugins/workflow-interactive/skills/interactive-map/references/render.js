@@ -110,7 +110,8 @@
     return lines;
   }
 
-  function renderSvg(model, L) {
+  function renderSvg(model, L, opts) {
+    var counts = (opts && opts.counts) || {};
     var S = L.g.card, out = [];
     out.push('<svg xmlns="http://www.w3.org/2000/svg" class="canvas" viewBox="0 0 ' + L.width + " " + L.height +
       '" width="' + L.width + '" height="' + L.height + '" role="img" aria-label="' + WF.esc(model.title) + '">');
@@ -155,6 +156,8 @@
       if (!isSource) out.push('<circle class="port in" cx="' + x + '" cy="' + (y + S / 2) + '" r="4.5"/>');
       out.push('<circle class="port out" cx="' + (x + S) + '" cy="' + (y + S / 2) + '" r="4.5"/>');
       if (extra.state) out.push('<circle class="state s-' + extra.state.replace(/\s/g, "-") + '" cx="' + (x + 8) + '" cy="' + (y + S - 8) + '" r="4"/>');
+      if (extra.runs) out.push('<g class="runs-pill"><rect x="' + (x + S - 20) + '" y="' + (y + S - 9) + '" width="28" height="15" rx="7.5"/>' +
+        '<text x="' + (x + S - 6) + '" y="' + (y + S + 2) + '">\u00d7' + extra.runs + "</text></g>");
       if (extra.mine) out.push('<text class="mine" x="' + (x - 7) + '" y="' + (y + 5) + '">★</text>');
       out.push('<g class="badge" data-badge="' + WF.esc(id) + '"><circle cx="' + (x + S - 1) + '" cy="' + (y + 1) +
         '" r="9.5"/><text x="' + (x + S - 1) + '" y="' + (y + 5) + '"></text></g>');
@@ -169,7 +172,7 @@
     });
     model.steps.forEach(function (s) {
       var unsure = s.unsure.length > 0 || /UNSURE/.test(s.who + s.check.by + s.you_or_it + s.credited);
-      card(String(s.n), s.n + " " + s.name, "", s.lane, s.icon, false, { unsure: unsure, state: s.state, mine: s.mine });
+      card(String(s.n), s.n + " " + s.name, "", s.lane, s.icon, false, { unsure: unsure, state: s.state, mine: s.mine, runs: counts[String(s.n)] || 0 });
     });
     out.push('<circle class="dot" r="6" cx="-20" cy="-20"/>');
     out.push("</svg>");

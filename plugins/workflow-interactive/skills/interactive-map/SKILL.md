@@ -12,6 +12,13 @@ it in Cowork. It is drawn in swimlanes, one lane for each kind of worker
 The student plays a walkthrough to watch data move from the sources through
 every step, and reads each step's check in a debug trace.
 
+The page opens in **View** mode: each card shows how many times it has run,
+opening a card shows **What it did** on every run (each pass through a loop
+kept separately, with its outputs, note, and check), and **Play** replays the
+real runs in order. **Edit** mode is where the workflow changes: drag cards,
+change fields, add steps, sources, and lanes. The student looks first and
+decides when to edit.
+
 The student owns the page. They edit it on the page itself and press
 **Save**, and they can ask you in the chat to change the workflow or the
 page. With GitHub connected, they **Pull**, **Commit**, and **Push** it to
@@ -96,6 +103,15 @@ The page keeps the whole workflow in one JSON block,
   Keep every arrow in the drawing, loops included.
 - `changes`: the change log, newest first, each `{"date", "what"}`.
 - `icons`: icons fetched for this map (see "Icons").
+- `runs`: what each step did, oldest first, each `{"id", "date", "step",
+  "round", "pass", "result", "note", "outputs", "check"}`. `result` is
+  `works`, `broken`, or `tried`; `outputs` lists file paths in the fleet
+  repository; `check` is `{"by", "result", "note"}` with `result` one of
+  `pass`, `fail`, `not checked`. `pass` counts the step's runs within the
+  round, so a step a loop sends back to runs as pass 1, pass 2, and so on.
+  Never rewrite or drop a run; a wrong one is corrected by a later run.
+- `round`: the current round, a whole run of the workflow from the start.
+  The student starts the next with **New round** in View mode.
 - `git`: kept by the page (`pulled`, `committed`, `pending`). Copy it as it
   is; never edit it by hand.
 - `connector`: only when the GitHub connector's names differ from the
@@ -169,8 +185,10 @@ student in one line that this page cannot save itself yet; they keep changes
 by pressing **Copy the map** and pasting into the chat. Never fall back to
 the `cms-workflow` template.
 
-**Then tell the student, briefly:** edit on the page and press **Save** (or
-Cmd or Ctrl + S); every save reloads the page. Press **Play** or **Step** to
+**Then tell the student, briefly:** the page opens in **View**: open a card
+to see what it did, and record each run there. Switch to **Edit** to change
+the workflow. Press **Save** (or Cmd or Ctrl + S) to keep any change; every
+save reloads the page. Press **Play** or **Step** to
 watch the walkthrough. With GitHub connected, **Commit** records the change
 on the page and **Push** sends it to the repository; **Pull** first if the
 page says the repository has newer commits. Then go through every `UNSURE`
@@ -191,11 +209,17 @@ with them, one step at a time.
   itself reads like "page: wider Claude lane".
 - Never drop a step, a source, an arrow, a lane, or a change log line unless
   the student asks.
-- Recording a run sets `state`, `state_date`, and `state_note`. With the
-  fleet folder attached, also append one line to `workflow/<id>/runs.jsonl`:
-  `{"date": "YYYY-MM-DD", "step": "<n>", "result": "works" or "broken",
-  "note": "...", "outputs": ["<path>"], "check": {"by": "...", "result":
-  "pass", "fail", or "not checked", "note": "..."}}`.
+- **Recording a run** adds one entry to `runs`: `round` is the map's
+  `round`, `pass` is one more than the step's runs already in that round,
+  `id` is `run-` and the next unused number. Ask the student what it made
+  (`outputs`), how it went (`result`, `note`), and whether it was checked,
+  by whom, and what the check found. Then set the step's `state`,
+  `state_date`, and `state_note` to the run's, and add a change log line
+  like "ran step 2 (pass 2): works, re-tagged with intertitles". With the
+  fleet folder attached and no GitHub connector, also append the run to
+  `workflow/<id>/runs.jsonl` as one line:
+  `{"date", "step", "round", "pass", "result", "note", "outputs", "check"}`.
+  With GitHub, **Push** writes that file.
 
 **Changing how the page looks or works.** The page's code is in the
 `<style data-wf>` and `<script data-wf>` elements. Edit inside them. Keep:
@@ -217,7 +241,8 @@ made.
 
 With GitHub connected, the page does this: **Commit** and **Push** write
 `workflow/<id>/map.md` (the JSON, fenced as `json`, under `## <title>`) and
-`workflow/<id>/map.html` (the whole page).
+`workflow/<id>/map.html` (the whole page), and `workflow/<id>/runs.jsonl` (one
+line per run) once any run is recorded.
 
 Without the connector, and with the fleet folder attached, write the same two
 files at the end of a working session; the student commits and pushes them

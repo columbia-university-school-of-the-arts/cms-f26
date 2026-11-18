@@ -147,8 +147,122 @@ var WF = (function () {
     m.changes = (Array.isArray(d.changes) ? d.changes : []).map(function (c) {
       return isObj(c) ? Object.assign({}, c, { date: str(c.date), what: str(c.what) }) : { date: "", what: str(c) };
     });
+    var RESULTS = ["works", "broken", "tried"], CHECKS = ["pass", "fail", "not checked"];
+    m.runs = (Array.isArray(d.runs) ? d.runs : []).filter(isObj).map(function (r, i) {
+      var c = isObj(r.check) ? r.check : {};
+      return Object.assign({}, r, {
+        id: str(r.id) || "run-" + (i + 1), date: str(r.date), step: str(r.step),
+        round: Math.max(1, parseInt(r.round, 10) || 1), pass: Math.max(1, parseInt(r.pass, 10) || 1),
+        result: RESULTS.indexOf(r.result) >= 0 ? r.result : "tried", note: str(r.note), outputs: arr(r.outputs),
+        check: Object.assign({}, c, { by: str(c.by), result: CHECKS.indexOf(c.result) >= 0 ? c.result : "not checked", note: str(c.note) })
+      });
+    });
+    var maxRound = m.runs.reduce(function (a, r) { return Math.max(a, r.round); }, 1);
+    m.round = Math.max(maxRound, parseInt(d.round, 10) || 1);
     m.problems = problems;
     return m;
+  }
+
+  /* ---------- runs: what each step did ---------- */
+
+  function recordRun(model, key, run, date) {
+    var m = normalize(clone(stripInternal(model)));
+    var r = isObj(run) ? run : {}, k = str(key);
+    var s = m.steps.filter(function (x) { return String(x.n) === k; })[0];
+    if (!s) return m;
+    var round = m.round;
+    var pass = m.runs.filter(function (x) { return x.step === k && x.round === round; }).length + 1;
+    var ids = {}, n = m.runs.length + 1;
+    m.runs.forEach(function (x) { ids[x.id] = true; });
+    while (ids["run-" + n]) n++;
+    var when = str(date) || today();
+    var entry = normalize({ runs: [{ id: "run-" + n, date: when, step: k, round: round, pass: pass,
+      result: r.result, note: r.note, outputs: r.outputs, check: r.check }] }).runs[0];
+    m.runs.push(entry);
+    s.state = entry.result; s.state_date = when; s.state_note = entry.note;
+    m.changes.unshift({ date: when, what: "ran step " + k + (pass > 1 ? " (pass " + pass + ")" : "") + ": " +
+      entry.result + (entry.note ? ", " + entry.note : "") });
+    return m;
+  }
+
+  function newRound(model, date) {
+    var m = normalize(clone(stripInternal(model)));
+    m.round += 1;
+    m.changes.unshift({ date: str(date) || today(), what: "started round " + m.round });
+    return m;
+  }
+
+  function runsFor(model, key) {
+    var k = str(key), groups = {};
+    model.runs.forEach(function (r) {
+      if (r.step !== k) return;
+      (groups[r.round] = groups[r.round] || []).push(r);
+    });
+    return Object.keys(groups).map(Number).sort(function (a, b) { return b - a; }).map(function (round) {
+      return { round: round, runs: groups[round].slice().sort(function (a, b) { return a.pass - b.pass; }) };
+    });
+  }
+
+  function rounds(model) {
+    var seen = {};
+    model.runs.forEach(function (r) { seen[r.round] = true; });
+    return Object.keys(seen).map(Number).sort(function (a, b) { return a - b; });
+  }
+
+  /* The real runs of one round, in the order they were recorded, as the same
+     events the walkthrough plays: an edge along the arrow that led there
+     (a loop arrow when the step comes round again), then the visit. */
+  function runEvents(model, round) {
+    var rr = model.runs.filter(function (r) { return r.round === round; });
+    var events = [], isSource = {}, seenStep = {}, prev = null;
+    model.sources.forEach(function (s) { isSource[s.id] = true; });
+    var fromSources = model.arrows.filter(function (a) { return isSource[a.from]; });
+    var used = {};
+    fromSources.forEach(function (a) {
+      if (rr.some(function (r) { return r.step === a.to; }) && !used[a.from]) {
+        used[a.from] = true;
+        events.push({ kind: "visit", node: a.from, pass: 1 });
+      }
+    });
+    rr.forEach(function (r) {
+      fromSources.forEach(function (a) {
+        if (a.to === r.step && !seenStep[r.step]) events.push({ kind: "edge", from: a.from, to: a.to, label: a.label, loop: false });
+      });
+      if (prev !== null) {
+        var arrow = model.arrows.filter(function (a) { return a.from === prev && a.to === r.step; })[0];
+        if (arrow) events.push({ kind: "edge", from: prev, to: r.step, label: arrow.label, loop: !!seenStep[r.step] });
+      }
+      events.push({ kind: "visit", node: r.step, pass: r.pass, run: r.id });
+      seenStep[r.step] = true;
+      prev = r.step;
+    });
+    return events;
+  }
+
+  function runTrace(model, events) {
+    var byId = {}, steps = {};
+    model.runs.forEach(function (r) { byId[r.id] = r; });
+    model.steps.forEach(function (s) { steps[String(s.n)] = s; });
+    var rows = [];
+    events.forEach(function (e) {
+      if (e.kind !== "visit" || !e.run || !byId[e.run]) return;
+      var r = byId[e.run], s = steps[r.step] || { name: "", lane: "", who: "" }, warnings = [];
+      if (r.check.result === "not checked") warnings.push("not checked");
+      else if (r.check.by && low(r.check.by) === low(s.who)) warnings.push("checked by the same worker who does it");
+      if (r.result === "tried") warnings.push("tried, no result recorded");
+      rows.push({ node: r.step, run: r.id, pass: r.pass, round: r.round, date: r.date, name: s.name, lane: s.lane,
+        out: r.outputs.join(", "), note: r.note, check: { by: r.check.by, how: r.check.note },
+        result: r.result === "broken" || r.check.result === "fail" ? "fail" : r.result === "works" ? "pass" : "none",
+        warnings: warnings });
+    });
+    return rows;
+  }
+
+  function runsJsonl(model) {
+    return model.runs.map(function (r) {
+      return JSON.stringify({ date: r.date, step: r.step, round: r.round, pass: r.pass, result: r.result,
+        note: r.note, outputs: r.outputs, check: { by: r.check.by, result: r.check.result, note: r.check.note } });
+    }).join("\n") + (model.runs.length ? "\n" : "");
   }
 
   function parse(text) {
@@ -349,7 +463,9 @@ var WF = (function () {
         git: { pulled: head || "", committed: (c.snapshot || m).changes ? (c.snapshot || m).changes.length : 0, pending: [] }
       }));
       try {
-        head = await gh.write(m.repo, [{ path: p.md, content: mapMd(snap) }, { path: p.html, content: pageHtml(snap) }], c.message);
+        var files = [{ path: p.md, content: mapMd(snap) }, { path: p.html, content: pageHtml(snap) }];
+        if (snap.runs.length) files.push({ path: p.runs, content: runsJsonl(snap) });
+        head = await gh.write(m.repo, files, c.message);
       } catch (e) { return { model: m, ok: false, message: errMessage(e) }; }
       m.git.pending.shift();
       m.git.pulled = str(head);
@@ -448,7 +564,8 @@ var WF = (function () {
     DEFAULT_LANES: DEFAULT_LANES, GITHUB: GITHUB, connectorConfig: connectorConfig, normalize: normalize, parse: parse, serializeData: serializeData,
     laneForWho: laneForWho, whoForLane: whoForLane, guessIcon: guessIcon, slug: slug, esc: esc, clone: clone,
     order: order, walk: walk, trace: trace, rebuild: rebuild, paths: paths, mapMd: mapMd, mapFromMd: mapFromMd,
-    uncommitted: uncommitted, commit: commit, status: status, push: push, pull: pull,
+    uncommitted: uncommitted, commit: commit, recordRun: recordRun, newRound: newRound, runsFor: runsFor,
+    rounds: rounds, runEvents: runEvents, runTrace: runTrace, runsJsonl: runsJsonl, status: status, push: push, pull: pull,
     keepAfterChoice: keepAfterChoice, makeAdapter: makeAdapter, today: today, stripInternal: stripInternal
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
