@@ -357,5 +357,69 @@ class GitTest(unittest.TestCase):
         self.assertEqual(r, ["abc", "hello", "new"])
 
 
+def build_module():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("build_page", PLUGIN / "tools" / "build_page.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+class PageTest(unittest.TestCase):
+    def test_template_is_built_from_its_parts(self):
+        self.assertEqual(TEMPLATE.read_text(), build_module().build(),
+                         "page-template.html is stale: run tools/build_page.py")
+
+    def test_template_is_self_contained(self):
+        t = TEMPLATE.read_text()
+        for bad in ("src=", 'href="http', "@import", "url(http"):
+            self.assertNotIn(bad, t)
+
+    def test_template_has_one_data_block_and_marked_code(self):
+        t = TEMPLATE.read_text()
+        blocks = DATA_RE.findall(t)
+        self.assertEqual(len(blocks), 1)
+        d = json.loads(blocks[0])
+        self.assertEqual(len(d["steps"]), 5)
+        self.assertEqual([s["icon"] for s in d["sources"]], ["internetarchive", "themoviedatabase", "mic"])
+        self.assertEqual(t.count('<div id="app"></div><script data-wf>'), 1)
+        self.assertEqual(t.count("</script><script data-wf>"), 3)
+        self.assertEqual(t.count("<style data-wf>"), 1)
+        self.assertTrue(t.startswith("<title>"))
+
+    def test_template_supports_dark_phone_and_motion(self):
+        t = TEMPLATE.read_text()
+        for needle in ("prefers-color-scheme: dark", ':root[data-theme="dark"]', "max-width: 860px",
+                       "prefers-reduced-motion", "overflow-wrap"):
+            self.assertIn(needle, t)
+
+    @unittest.skipUnless(HAS_NODE, "node not installed")
+    def test_render_svg(self):
+        sample = json.loads((REF / "sample.json").read_text())
+        sample["steps"][0]["name"] = "Gather <b>clips</b>"
+        svg = run_js("(function(){var m=WF.normalize(" + J(sample) + "); return WF.renderSvg(m, WF.layout(m));})()",
+                     (REF / "render.js").read_text())
+        for needle in ("Sources", "Me", "Claude", "Someone or a", "Internet Archive", "TMDB", "2 Tag scenes",
+                       "&lt;b&gt;", 'data-node="src-tmdb"', 'class="edge loop"'):
+            self.assertIn(needle, svg)
+        self.assertNotIn("<b>", svg)
+        self.assertEqual(svg.count('class="edge'), 8)
+
+    @unittest.skipUnless(HAS_NODE, "node not installed")
+    def test_sources_sit_left_of_their_first_step(self):
+        sample = json.loads((REF / "sample.json").read_text())
+        r = run_js("(function(){var m=WF.normalize(" + J(sample) + "); var L=WF.layout(m);"
+                   " return [L.nodes['src-archive'].x, L.nodes['1'].x, L.nodes['src-tmdb'].x, L.nodes['2'].x];})()",
+                   (REF / "render.js").read_text())
+        self.assertLess(r[0], r[1])
+        self.assertLess(r[2], r[3])
+
+    @unittest.skipUnless(HAS_NODE, "node not installed")
+    def test_lane_colour_must_be_hex(self):
+        r = run_js("WF.laneColor(WF.normalize({lanes:[{id:'x',name:'X',kind:'me',color:'red;}</style>'}]}), 'x')",
+                   (REF / "render.js").read_text())
+        self.assertEqual(r, "#c2410c")
+
+
 if __name__ == "__main__":
     unittest.main()

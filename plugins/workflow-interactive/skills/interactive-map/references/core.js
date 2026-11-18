@@ -259,7 +259,7 @@ var WF = (function () {
     return "<!doctype html><html><head><meta charset=utf8><meta name=viewport " +
       "content=\"width=device-width,initial-scale=1,viewport-fit=cover\"><style>" + str(p.reset) +
       "</style></head><body><title>" + esc(p.title) + "</title>" + (p.styles || []).join("") +
-      "<script type=\"application/json\" id=\"workflow\">" + p.dataText + "</script><div id=\"app\"></div>" +
+      "<script type=\"application/json\" id=\"workflow\">" + p.dataText + "<\/script><div id=\"app\"></div>" +
       (p.scripts || []).join("") + "</body></html>";
   }
 

@@ -1,0 +1,58 @@
+{
+  "title": "Close reading of archival TV",
+  "question": "How did local news in 1970s New York frame the city's fiscal crisis?",
+  "begun": "2026-11-18",
+  "id": "close-reading-of-archival-tv",
+  "kind": "research",
+  "repo": { "owner": "", "name": "", "branch": "main" },
+  "lanes": [
+    { "id": "sources", "name": "Sources", "kind": "sources", "icon": "database" },
+    { "id": "me", "name": "Me", "kind": "me", "icon": "user" },
+    { "id": "claude", "name": "Claude", "kind": "claude", "icon": "sparkles" },
+    { "id": "other", "name": "Someone or a script", "kind": "other", "icon": "cog" }
+  ],
+  "sources": [
+    { "id": "src-archive", "name": "Internet Archive", "icon": "internetarchive", "kind": "download",
+      "link": "https://archive.org/details/tv", "gives": "news clips", "unsure": [] },
+    { "id": "src-tmdb", "name": "TMDB", "icon": "themoviedatabase", "kind": "api",
+      "link": "https://www.themoviedb.org", "gives": "programme metadata", "unsure": [] },
+    { "id": "src-interviews", "name": "Interviews", "icon": "mic", "kind": "by hand",
+      "link": "", "gives": "transcripts", "unsure": ["are the interviews a source or a step?"] }
+  ],
+  "steps": [
+    { "n": 1, "name": "Gather clips", "in": "a search of the archive", "out": "12 clips", "who": "me",
+      "check": { "by": "me", "how": "count matches the screening list" }, "run": "Download the clips listed in sources/screening.md into sources/clips/.",
+      "state": "works", "state_date": "2026-11-14", "state_note": "all 12 downloaded", "you_or_it": "it", "credited": "me",
+      "mine": false, "unsure": [], "lane": "me", "col": 0, "icon": "download" },
+    { "n": 2, "name": "Tag scenes", "in": "12 clips, metadata", "out": "12 tagged clips", "who": "Claude",
+      "check": { "by": "me", "how": "spot-check three clips against the tags" }, "run": "Tag each clip in sources/clips/ by scene, speaker, and on-screen text, into notes/tags.csv.",
+      "state": "broken", "state_date": "2026-11-16", "state_note": "tags miss intertitles", "you_or_it": "UNSURE", "credited": "UNSURE",
+      "mine": false, "unsure": [], "lane": "claude", "col": 1, "icon": "tag" },
+    { "n": 3, "name": "Close-read", "in": "tagged clips, transcripts", "out": "reading notes", "who": "me",
+      "check": { "by": "Rob", "how": "reads two notes against the clips" }, "run": "By hand.",
+      "state": "not tried", "state_date": "", "state_note": "", "you_or_it": "you", "credited": "me",
+      "mine": true, "unsure": [], "lane": "me", "col": 2, "icon": "book-open" },
+    { "n": 4, "name": "Compare readings", "in": "reading notes", "out": "a comparison", "who": "UNSURE",
+      "check": { "by": "UNSURE", "how": "" }, "run": "",
+      "state": "not tried", "state_date": "", "state_note": "", "you_or_it": "UNSURE", "credited": "UNSURE",
+      "mine": false, "unsure": ["who does the comparison?"], "lane": "other", "col": 3, "icon": "git-compare" },
+    { "n": 5, "name": "Write up", "in": "a comparison", "out": "a draft section", "who": "me",
+      "check": { "by": "me", "how": "reread the next morning" }, "run": "By hand.",
+      "state": "not tried", "state_date": "", "state_note": "", "you_or_it": "it", "credited": "me",
+      "mine": false, "unsure": [], "lane": "me", "col": 4, "icon": "pen-line" }
+  ],
+  "arrows": [
+    { "from": "src-archive", "to": 1, "label": "12 clips" },
+    { "from": "src-tmdb", "to": 2, "label": "metadata" },
+    { "from": 1, "to": 2, "label": "12 clips" },
+    { "from": 2, "to": 3, "label": "12 tagged" },
+    { "from": "src-interviews", "to": 3, "label": "transcripts" },
+    { "from": 3, "to": 4, "label": "notes" },
+    { "from": 4, "to": 2, "loop": true, "label": "re-tag" },
+    { "from": 4, "to": 5, "label": "comparison" }
+  ],
+  "changes": [
+    { "date": "2026-11-18", "what": "map begun from the Week 10 drawing" }
+  ],
+  "icons": {}
+}
