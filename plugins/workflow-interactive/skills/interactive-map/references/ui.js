@@ -855,6 +855,7 @@
       "aria-label": "Say it instead of typing", "aria-pressed": "false", onclick: toggleMic }, ["🎙"]);
     chatEl.appendChild(chatLog);
     chatEl.appendChild(h("div", { "class": "chat-form" }, [chatInput, chatMic, chatSend]));
+    chatEl.appendChild(h("p", { "class": "chat-cost", text: "Uses your Claude plan. Small edits are free in the forms." }));
   }
 
   function chatItem(item) {
@@ -906,7 +907,7 @@
     S.chat.busy = ctl;
     renderChat();
     try {
-      var reply = WF.readReply(await S.sample.json(turns, { signal: ctl.signal, cache: false }));
+      var reply = WF.readReply(await S.sample.json(turns, { signal: ctl.signal, cache: false, modelTier: "quick" }));
       var draft = WF.applyChanges(M(), reply.changes);
       S.chat.turns.push({ role: "assistant", content: JSON.stringify({ reply: reply.reply, changes: reply.changes }) });
       S.chat.items.push({ role: "claude", text: reply.reply || (draft.done.length ? "" : "No change."), changes: reply.changes,

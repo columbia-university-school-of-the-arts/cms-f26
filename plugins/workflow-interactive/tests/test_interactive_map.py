@@ -382,8 +382,10 @@ class SkillTest(unittest.TestCase):
         for needle in ("Tell the map what to change", '"sample": {}', '"dictation": {}', "Apply", '{"artifact": {}}'):
             self.assertIn(needle, t)
         page = TEMPLATE.read_text()
-        for needle in ('use("sample")', 'use("dictation")', "WF.applyChanges", "not_granted", "chatAvailable"):
+        for needle in ('use("sample")', 'use("dictation")', "WF.applyChanges", "not_granted", "chatAvailable",
+                       'modelTier: "quick"', "Uses your Claude plan. Small edits are free in the forms."):
             self.assertIn(needle, page)
+        self.assertIn("their own Claude plan", t)
 
     def test_no_github_connector(self):
         self.assertFalse((REF / "connect-github.md").exists())
@@ -586,7 +588,8 @@ class ChatChangesTest(unittest.TestCase):
     def test_chat_history_is_trimmed(self):
         hist = [{"role": "user" if i % 2 == 0 else "assistant", "content": "m%d" % i} for i in range(30)]
         r = run_js("WF.chatTurns(WF.normalize(" + J(LOOP) + "), " + J(hist) + ", 'last')")
-        self.assertLessEqual(len(r), 1 + 12 + 1)
+        self.assertEqual(len(r), 1 + 6 + 1)
+        self.assertEqual(r[1]["content"], "m24")
         self.assertEqual(r[1]["role"], "user")
         self.assertEqual(r[-1]["role"], "user")
 

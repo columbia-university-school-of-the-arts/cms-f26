@@ -167,3 +167,4 @@ svg.canvas { display: block; touch-action: none; user-select: none; font-family:
 .chat-form textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .btn-go.stop { border-color: var(--bad); }
 .btn.mic.listening { border-color: var(--bad); background: var(--bad); color: #fff; }
+.chat-cost { margin: 6px 0 0; color: var(--faint); font-size: 12px; }

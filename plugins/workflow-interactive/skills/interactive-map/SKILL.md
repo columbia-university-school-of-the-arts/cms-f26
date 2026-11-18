@@ -24,7 +24,9 @@ in words, typed or spoken: "move step 4 to the Me lane", "add a loop from 4
 back to 2", "record that step 2 worked, it wrote notes/tags.csv". The page
 asks Claude on the student's own account, shows the changes Claude plans as
 change log lines, and changes nothing until the student presses **Apply**;
-Save keeps them, as with any edit. Claude there can only make the changes the
+Save keeps them, as with any edit. Each message uses the student's
+own Claude plan, the same usage Cowork draws on, so the page uses the
+fastest model and sends only the last few messages; the forms cost nothing. Claude there can only make the changes the
 page offers; it never touches the page's code. Where Claude is not available
 to the page, the box hides and the forms and this chat remain.
 
@@ -189,7 +191,8 @@ and pasting into the chat. Never fall back to the `cms-workflow` template.
 to see what it did, and record each run there. Switch to **Edit** to change
 the workflow, or type the change in **Tell the map what to change** and
 press **Apply** on Claude's plan (the first time, the page asks to use their
-Claude account). Press **Save** (or Cmd or Ctrl + S) to keep any change; every
+Claude account). The box runs on their own Claude plan, so small edits are
+better made in the forms, which are free. Press **Save** (or Cmd or Ctrl + S) to keep any change; every
 save reloads the page. Press **Play** or **Step** to
 watch the walkthrough. To keep a copy in the repository, they ask you to save
 the map to their fleet folder, then commit and push it themselves. Then go

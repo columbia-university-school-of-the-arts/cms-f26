@@ -682,7 +682,7 @@ var WF = (function () {
   function chatTurns(model, history, message) {
     var past = (Array.isArray(history) ? history : []).filter(function (t) {
       return isObj(t) && (t.role === "user" || t.role === "assistant") && str(t.content).trim();
-    }).map(function (t) { return { role: t.role, content: str(t.content) }; }).slice(-12);
+    }).map(function (t) { return { role: t.role, content: str(t.content) }; }).slice(-6);
     while (past.length && past[0].role !== "user") past.shift();
     return [{ role: "user", content: CHAT_RULES }].concat(past, [{ role: "user", content:
       "The map now:\n" + chatData(model) + "\n\nThe next new step is " + nextStepNumber(model) +
