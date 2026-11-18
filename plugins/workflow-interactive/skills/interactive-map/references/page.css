@@ -148,3 +148,23 @@ svg.canvas { display: block; touch-action: none; user-select: none; font-family:
   .trace-row { grid-template-columns: 22px 1fr; } .t-out, .t-check { grid-column: 2; }
 }
 @media (prefers-reduced-motion: reduce) { .card.hit .card-flash { animation: none; } .pill, .badge, .toast { transition: none; } }
+.chat { margin: 0 0 12px; padding: 10px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: var(--shadow); }
+.chat-log { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.chat-item { padding: 6px 10px; border-radius: 8px; max-width: 760px; }
+.chat-item p { margin: 0; }
+.chat-item.user { align-self: flex-end; background: var(--surface-2); }
+.chat-item.claude { align-self: flex-start; border: 1px solid var(--border); }
+.chat-item.thinking p { color: var(--muted); font-style: italic; }
+.chat-item.error { border-color: var(--warn); }
+.chat-item.applied { border-color: var(--ok); }
+.chat-item .plan { margin: 6px 0; padding-left: 18px; }
+.chat-item .plan.failed { color: var(--warn); }
+.chat-item .row { display: flex; gap: 6px; margin-top: 6px; }
+.chat-form { display: flex; gap: 6px; align-items: flex-end; }
+.chat-form textarea { flex: 1; min-width: 0; font: inherit; padding: 6px 10px; border-radius: 7px; resize: none;
+  border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+.chat-form textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.btn-go.stop { border-color: var(--bad); }
+.btn.mic.listening { border-color: var(--bad); background: var(--bad); color: #fff; }
+.chat-cost { margin: 6px 0 0; color: var(--faint); font-size: 12px; }
