@@ -59,7 +59,7 @@ class PluginTest(unittest.TestCase):
     def test_manifest(self):
         m = json.loads((PLUGIN / ".claude-plugin" / "plugin.json").read_text())
         self.assertEqual(m["name"], "workflow-interactive")
-        self.assertEqual(m["version"], "0.2.0")
+        self.assertEqual(m["version"], "0.3.0")
         self.assertEqual(m["skills"], ["./skills/interactive-map"])
         self.assertEqual(m["license"], "CC-BY-NC-SA-4.0")
 
@@ -377,6 +377,14 @@ class SkillTest(unittest.TestCase):
                 continue
             self.assertTrue(name in icons["brand"] or name in icons["generic"], name)
 
+    def test_chat_box_is_declared_and_hides_without_sample(self):
+        t = self.text()
+        for needle in ("Tell the map what to change", '"sample": {}', '"dictation": {}', "Apply", '{"artifact": {}}'):
+            self.assertIn(needle, t)
+        page = TEMPLATE.read_text()
+        for needle in ('use("sample")', 'use("dictation")', "WF.applyChanges", "not_granted", "chatAvailable"):
+            self.assertIn(needle, page)
+
     def test_no_github_connector(self):
         self.assertFalse((REF / "connect-github.md").exists())
         self.assertNotIn("mcp", self.text())
@@ -449,6 +457,138 @@ class RunsTest(unittest.TestCase):
                          ("2", "tried", 1, 1))
         self.assertEqual(m["round"], 1)
 
+
+def apply(changes, base=None, extra="return r;"):
+    return run_js("(function(){var m=WF.normalize(" + J(base or LOOP) + "); var r=WF.applyChanges(m," + J(changes) +
+                  ",'2026-11-18');" + extra + "})()")
+
+
+@unittest.skipUnless(HAS_NODE, "node not installed")
+class ChatChangesTest(unittest.TestCase):
+    def test_move_step_to_a_lane_changes_who(self):
+        r = apply([{"op": "move_step", "step": "4", "lane": "Claude", "col": 1.5}])
+        s = [x for x in r["model"]["steps"] if x["n"] == 4][0]
+        self.assertEqual((s["lane"], s["who"], s["col"]), ("claude", "Claude", 1.5))
+        self.assertEqual(r["failed"], [])
+        self.assertEqual(r["done"], ["moved step 4 to the Claude lane, so Claude does it and along the flow"])
+        self.assertEqual(r["model"]["changes"][0], {"date": "2026-11-18", "what": r["done"][0]})
+
+    def test_lane_by_kind_name_or_id(self):
+        for name in ("me", "Me", "ME"):
+            r = apply([{"op": "move_step", "step": 2, "lane": name}])
+            self.assertEqual([x for x in r["model"]["steps"] if x["n"] == 2][0]["lane"], "me")
+        r = apply([{"op": "move_step", "step": 2, "lane": "sources"}])
+        self.assertEqual(r["done"], [])
+        self.assertIn("lane", r["failed"][0]["why"])
+
+    def test_arrows_add_label_and_remove(self):
+        r = apply([{"op": "add_arrow", "from": "5", "to": "1", "loop": True, "label": "a new question"},
+                   {"op": "label_arrow", "from": "1", "to": "2", "label": "40 clips"},
+                   {"op": "remove_arrow", "from": "4", "to": "5"}])
+        arrows = [(a["from"], a["to"], a["loop"], a["label"]) for a in r["model"]["arrows"]]
+        self.assertIn(("5", "1", True, "a new question"), arrows)
+        self.assertIn(("1", "2", False, "40 clips"), arrows)
+        self.assertNotIn("5", [a[1] for a in arrows if a[0] == "4"])
+        self.assertEqual(r["done"], ["added an arrow from 5 to 1", "labelled the arrow from 1 to 2: 40 clips",
+                                     "removed the arrow from 4 to 5"])
+
+    def test_bad_arrows_are_refused(self):
+        r = apply([{"op": "add_arrow", "from": "9", "to": "1"}, {"op": "add_arrow", "from": "1", "to": "2"},
+                   {"op": "remove_arrow", "from": "1", "to": "5"}, {"op": "add_arrow", "from": "2", "to": "src-a"}])
+        self.assertEqual(r["done"], [])
+        self.assertEqual(len(r["failed"]), 4)
+        self.assertEqual(len(r["model"]["arrows"]), len(LOOP["arrows"]))
+
+    def test_set_step_fields_only_known_ones(self):
+        r = apply([{"op": "set_step", "step": "3", "fields": {"name": "Close-read", "check_by": "Rob",
+                    "check_how": "reads two", "mine": True, "unsure": "who credits it", "lane": "claude", "n": 9}}])
+        s = [x for x in r["model"]["steps"] if x["n"] == 3][0]
+        self.assertEqual((s["name"], s["check"]["by"], s["check"]["how"], s["mine"], s["unsure"], s["lane"]),
+                         ("Close-read", "Rob", "reads two", True, ["who credits it"], "me"))
+        self.assertEqual(r["done"], ["edited step 3: name, who checks, how it is checked, mine, unsure"])
+        self.assertIn("lane", r["failed"][0]["why"])
+
+    def test_add_step_numbers_it_and_arrows_can_follow(self):
+        r = apply([{"op": "add_step", "name": "Ask an archivist", "lane": "other", "after": "2", "out": "notes"},
+                   {"op": "add_arrow", "from": "2", "to": "6"}])
+        s = r["model"]["steps"][-1]
+        self.assertEqual((s["n"], s["name"], s["lane"], s["who"], s["out"], s["col"]),
+                         (6, "Ask an archivist", "other", "someone else", "notes", 1.5))
+        self.assertEqual(r["done"], ["added step 6 Ask an archivist", "added an arrow from 2 to 6"])
+        self.assertEqual(s["you_or_it"], "UNSURE")
+
+    def test_remove_step_takes_its_arrows(self):
+        r = apply([{"op": "remove_step", "step": "5"}])
+        self.assertNotIn(5, [s["n"] for s in r["model"]["steps"]])
+        self.assertFalse([a for a in r["model"]["arrows"] if "5" in (a["from"], a["to"])])
+        self.assertEqual(r["done"], ["removed step 5 Write"])
+
+    def test_sources(self):
+        r = apply([{"op": "add_source", "name": "TMDB", "kind": "api", "gives": "cast lists", "feeds": ["1", "9"]},
+                   {"op": "set_source", "source": "Archive", "fields": {"link": "https://archive.org", "icon": "internetarchive"}},
+                   {"op": "remove_source", "source": "src-nope"}])
+        src = r["model"]["sources"]
+        self.assertEqual([s["id"] for s in src], ["src-a", "src-tmdb"])
+        self.assertEqual((src[1]["kind"], src[1]["gives"], src[1]["icon"]), ("api", "cast lists", "globe"))
+        self.assertEqual(src[0]["link"], "https://archive.org")
+        self.assertIn(("src-tmdb", "1"), [(a["from"], a["to"]) for a in r["model"]["arrows"]])
+        self.assertEqual(r["done"][:2], ["added source TMDB, feeding 1", "edited source Archive: link, icon"])
+        self.assertEqual(len(r["failed"]), 2)
+
+    def test_lanes(self):
+        r = apply([{"op": "add_lane", "name": "My editor", "kind": "other"},
+                   {"op": "rename_lane", "lane": "other", "name": "A script"},
+                   {"op": "move_step", "step": "3", "lane": "My editor"}])
+        self.assertEqual([l["name"] for l in r["model"]["lanes"]], ["Sources", "Me", "Claude", "A script", "My editor"])
+        s = [x for x in r["model"]["steps"] if x["n"] == 3][0]
+        self.assertEqual(s["lane"], "my-editor")
+        self.assertEqual(r["failed"], [])
+
+    def test_runs_and_rounds_use_the_same_path(self):
+        r = apply([{"op": "record_run", "step": "2", "result": "works", "note": "tagged 40",
+                    "outputs": ["notes/tags.csv"], "check": {"by": "me", "result": "pass"}},
+                   {"op": "new_round"}, {"op": "record_run", "step": "2", "result": "great"}])
+        runs = r["model"]["runs"]
+        self.assertEqual([(x["round"], x["pass"], x["result"]) for x in runs], [(1, 1, "works"), (2, 1, "tried")])
+        self.assertEqual(runs[0]["outputs"], ["notes/tags.csv"])
+        self.assertEqual(r["done"], ["ran step 2: works, tagged 40", "started round 2", "ran step 2: tried"])
+
+    def test_unknown_or_junk_changes_fail_alone(self):
+        r = apply([{"op": "delete_everything"}, "junk", None, {"op": "set_map", "fields": {"title": "New title", "id": "x"}}])
+        self.assertEqual(r["model"]["title"], "New title")
+        self.assertEqual(r["done"], ["edited the map: title"])
+        self.assertEqual(len(r["failed"]), 4)
+
+    def test_input_model_is_untouched(self):
+        r = apply([{"op": "remove_step", "step": "1"}], extra="return m.steps.length;")
+        self.assertEqual(r, 5)
+
+    def test_reply_is_coerced(self):
+        r = run_js("[WF.readReply({reply: 'ok', changes: [{op: 'new_round'}]}), WF.readReply('text'),"
+                   " WF.readReply([{op: 'new_round'}]), WF.readReply(null)]")
+        self.assertEqual(r[0], {"reply": "ok", "changes": [{"op": "new_round"}]})
+        self.assertEqual(r[1], {"reply": "text", "changes": []})
+        self.assertEqual(r[2]["changes"], [{"op": "new_round"}])
+        self.assertEqual(r[3], {"reply": "", "changes": []})
+
+    def test_chat_turns_carry_rules_map_and_history(self):
+        r = run_js("WF.chatTurns(WF.normalize(" + J(LOOP) + "), [{role:'user', content:'hi'}, {role:'assistant', content:'hello'}],"
+                   " 'move step 4 to me')")
+        self.assertEqual([t["role"] for t in r], ["user", "user", "assistant", "user"])
+        rules, last = r[0]["content"], r[-1]["content"]
+        for needle in ("move_step", "add_arrow", "record_run", "UNSURE", "you_or_it", "\"changes\"", "Never invent"):
+            self.assertIn(needle, rules)
+        self.assertIn("move step 4 to me", last)
+        self.assertIn('"Compare"', last)
+        self.assertIn("next new step is 6", last)
+        self.assertNotIn('"runs"', last)
+
+    def test_chat_history_is_trimmed(self):
+        hist = [{"role": "user" if i % 2 == 0 else "assistant", "content": "m%d" % i} for i in range(30)]
+        r = run_js("WF.chatTurns(WF.normalize(" + J(LOOP) + "), " + J(hist) + ", 'last')")
+        self.assertLessEqual(len(r), 1 + 12 + 1)
+        self.assertEqual(r[1]["role"], "user")
+        self.assertEqual(r[-1]["role"], "user")
 
 
 if __name__ == "__main__":

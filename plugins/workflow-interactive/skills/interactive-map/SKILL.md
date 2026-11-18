@@ -19,6 +19,15 @@ real runs in order. **Edit** mode is where the workflow changes: drag cards,
 change fields, add steps, sources, and lanes. The student looks first and
 decides when to edit.
 
+A box above the map, **Tell the map what to change**, takes the same edits
+in words, typed or spoken: "move step 4 to the Me lane", "add a loop from 4
+back to 2", "record that step 2 worked, it wrote notes/tags.csv". The page
+asks Claude on the student's own account, shows the changes Claude plans as
+change log lines, and changes nothing until the student presses **Apply**;
+Save keeps them, as with any edit. Claude there can only make the changes the
+page offers; it never touches the page's code. Where Claude is not available
+to the page, the box hides and the forms and this chat remain.
+
 The student owns the page. They edit it on the page itself and press
 **Save**, and they can ask you in the chat to change the workflow or the
 page. When they ask, you save the map's files into their fleet repository's
@@ -165,17 +174,22 @@ Name the artifact with the map's title, so a student with several maps can
 tell them apart.
 
 **Publishing.** Publish the page as the student's own artifact with the
-capability `artifact: {}`, when your artifact tool accepts it, so the page can
-save itself. Declare nothing else: the page does not use connectors.
+capabilities `{"artifact": {}, "sample": {}, "dictation": {}}`, when your
+artifact tool accepts them: `artifact` lets the page save itself, `sample`
+runs the **Tell the map what to change** box, and `dictation` its microphone.
+Declare nothing else: the page does not use connectors.
 
-If the publish refuses the capability, publish without it and tell the
-student in one line that this page cannot save itself yet; they keep changes
-by pressing **Copy the map** and pasting into the chat. Never fall back to
-the `cms-workflow` template.
+If the publish refuses `sample` or `dictation`, publish again with
+`{"artifact": {}}` alone; the box then hides itself. If it refuses `artifact`
+too, publish without capabilities and tell the student in one line that this
+page cannot save itself yet; they keep changes by pressing **Copy the map**
+and pasting into the chat. Never fall back to the `cms-workflow` template.
 
 **Then tell the student, briefly:** the page opens in **View**: open a card
 to see what it did, and record each run there. Switch to **Edit** to change
-the workflow. Press **Save** (or Cmd or Ctrl + S) to keep any change; every
+the workflow, or type the change in **Tell the map what to change** and
+press **Apply** on Claude's plan (the first time, the page asks to use their
+Claude account). Press **Save** (or Cmd or Ctrl + S) to keep any change; every
 save reloads the page. Press **Play** or **Step** to
 watch the walkthrough. To keep a copy in the repository, they ask you to save
 the map to their fleet folder, then commit and push it themselves. Then go

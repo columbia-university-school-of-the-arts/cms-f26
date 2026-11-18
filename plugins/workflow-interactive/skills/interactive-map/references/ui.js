@@ -31,7 +31,8 @@
   var S = {
     model: parsed.model, dirty: false, selected: null, level: 1, artifact: null,
     readOnly: false, walk: null, edits: {}, saving: false,
-    mode: "view", viewRound: null
+    mode: "view", viewRound: null,
+    sample: null, dictation: null, chat: { turns: [], items: [], busy: null, off: false }
   };
   var M = function () { return S.model; };
 
@@ -92,7 +93,8 @@
     return ok;
   }
   function stash() {
-    try { sessionStorage.setItem("wf-ui", JSON.stringify({ selected: S.selected, scroll: canvasWrap().scrollLeft, mode: S.mode, round: S.viewRound })); } catch (e) { /* none */ }
+    try { sessionStorage.setItem("wf-ui", JSON.stringify({ selected: S.selected, scroll: canvasWrap().scrollLeft, mode: S.mode, round: S.viewRound,
+      chat: { turns: S.chat.turns.slice(-12), items: S.chat.items.slice(-12).map(function (it) { return Object.assign({}, it, { live: false }); }) } })); } catch (e) { /* none */ }
   }
   function unstash() {
     try {
@@ -107,13 +109,14 @@
   var header = h("header", { "class": "top" });
   var toolbar = h("div", { "class": "toolbar", role: "toolbar" });
   var banner = h("div", { "class": "banner", hidden: true });
+  var chatEl = h("section", { "class": "chat", hidden: true, "aria-label": "Tell the map what to change" });
   var problems = h("div", { "class": "problems", hidden: true });
   var wrapEl = h("div", { "class": "canvas-wrap" });
   var traceEl = h("section", { "class": "trace" });
   var panel = h("aside", { "class": "panel", hidden: true, "aria-label": "Details" });
   var logEl = h("section", { "class": "log" });
   var main = h("div", { "class": "main" }, [h("div", { "class": "work" }, [wrapEl, traceEl]), panel]);
-  [header, toolbar, banner, problems, main, logEl, h("div", { "class": "toast", role: "status" })].forEach(function (e) { app.appendChild(e); });
+  [header, toolbar, chatEl, banner, problems, main, logEl, h("div", { "class": "toast", role: "status" })].forEach(function (e) { app.appendChild(e); });
   function canvasWrap() { return wrapEl; }
 
   /* ---------- header and toolbar ---------- */
@@ -807,10 +810,165 @@
     });
   }
 
+
+  /* ---------- the chat box: say what to change ---------- */
+  var CHAT_OFF = ["not_granted", "sampling_disabled", "not_declared", "capability_disabled", "capability_removed"];
+  var CHAT_COPY = {
+    rate_limited: "Claude is busy for you right now. Wait a minute, then try again.",
+    session_expired: "Sign in to Claude again, then try again.",
+    invalid_json: "Claude's answer could not be read. Try again, or say it another way.",
+    refused: "Claude would not make that change. Say it another way.",
+    empty_completion: "Claude gave no answer. Say it another way.",
+    prompt_too_large: "This map is too big to send to Claude. Ask in the Cowork chat instead.",
+    cancelled: "Stopped."
+  };
+  var chatInput = null, chatLog = null, chatSend = null, chatMic = null, dictBase = "", dictFinal = "";
+
+  function chatAvailable() { return !!S.sample && !S.chat.off && !S.readOnly; }
+
+  function renderChat() {
+    chatEl.hidden = !chatAvailable();
+    if (chatEl.hidden) return;
+    if (!chatInput) buildChat();
+    renderChatLog();
+    var busy = !!S.chat.busy;
+    chatSend.textContent = busy ? "Stop" : "Go";
+    chatSend.classList.toggle("stop", busy);
+    chatMic.hidden = !S.dictation;
+  }
+
+  function buildChat() {
+    chatLog = h("div", { "class": "chat-log", "aria-live": "polite" });
+    chatInput = h("textarea", { rows: 1, placeholder: "Tell the map what to change: “move step 4 to the Me lane”, “record that step 2 worked”",
+      "aria-label": "Tell the map what to change" });
+    chatInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendChat(); }
+    });
+    chatInput.addEventListener("input", function () {
+      chatInput.style.height = "auto";
+      chatInput.style.height = Math.min(140, chatInput.scrollHeight) + "px";
+    });
+    chatSend = h("button", { type: "button", "class": "btn btn-go", onclick: function () {
+      if (S.chat.busy) S.chat.busy.abort(); else sendChat();
+    } }, ["Go"]);
+    chatMic = h("button", { type: "button", "class": "btn mic", hidden: true, title: "Say it instead of typing",
+      "aria-label": "Say it instead of typing", "aria-pressed": "false", onclick: toggleMic }, ["🎙"]);
+    chatEl.appendChild(chatLog);
+    chatEl.appendChild(h("div", { "class": "chat-form" }, [chatInput, chatMic, chatSend]));
+  }
+
+  function chatItem(item) {
+    var box = h("div", { "class": "chat-item " + item.role + (item.status ? " " + item.status : "") });
+    if (item.role === "user") { box.appendChild(h("p", { text: item.text })); return box; }
+    if (item.text) box.appendChild(h("p", { text: item.text }));
+    if (item.lines && item.lines.length) {
+      box.appendChild(h("ul", { "class": "plan" }, item.lines.map(function (l) { return h("li", { text: l }); })));
+    }
+    if (item.failed && item.failed.length) {
+      box.appendChild(h("ul", { "class": "plan failed" }, item.failed.map(function (l) { return h("li", { text: "Could not: " + l }); })));
+    }
+    if (item.status === "proposed" && item.live) {
+      box.appendChild(h("div", { "class": "row" }, [
+        h("button", { type: "button", "class": "btn btn-save", onclick: function () { applyItem(item); } }, ["Apply"]),
+        h("button", { type: "button", "class": "btn", onclick: function () { item.status = "discarded"; renderChat(); } }, ["Discard"])
+      ]));
+    } else if (item.status === "applied") {
+      box.appendChild(h("p", { "class": "hint", text: "Applied." }));
+    } else if (item.status === "discarded" || item.status === "proposed") {
+      box.appendChild(h("p", { "class": "hint", text: "Not applied." }));
+    }
+    return box;
+  }
+
+  function renderChatLog() {
+    chatLog.innerHTML = "";
+    var items = S.chat.items.slice(-12);
+    chatLog.hidden = !items.length && !S.chat.busy;
+    items.forEach(function (it) { chatLog.appendChild(chatItem(it)); });
+    if (S.chat.busy) chatLog.appendChild(h("div", { "class": "chat-item claude thinking" }, [h("p", { text: "Thinking…" })]));
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
+
+  async function sendChat() {
+    var text = chatInput.value.trim();
+    if (!text || S.chat.busy || !chatAvailable()) return;
+    flushEdits();
+    if (S.dictation && chatMic.getAttribute("aria-pressed") === "true") {
+      try { await S.dictation.stop(); } catch (e) { /* none */ }
+      text = chatInput.value.trim() || text;
+    }
+    var turns = WF.chatTurns(M(), S.chat.turns, text);
+    S.chat.turns.push({ role: "user", content: text });
+    S.chat.items.push({ role: "user", text: text });
+    chatInput.value = "";
+    chatInput.style.height = "";
+    var ctl = new AbortController();
+    S.chat.busy = ctl;
+    renderChat();
+    try {
+      var reply = WF.readReply(await S.sample.json(turns, { signal: ctl.signal, cache: false }));
+      var draft = WF.applyChanges(M(), reply.changes);
+      S.chat.turns.push({ role: "assistant", content: JSON.stringify({ reply: reply.reply, changes: reply.changes }) });
+      S.chat.items.push({ role: "claude", text: reply.reply || (draft.done.length ? "" : "No change."), changes: reply.changes,
+        lines: draft.done, failed: draft.failed.map(function (f) { return f.why; }),
+        status: draft.done.length ? "proposed" : "", live: true });
+    } catch (e) {
+      var code = e && e.code;
+      if (CHAT_OFF.indexOf(code) >= 0) {
+        S.chat.off = true;
+        toast("Claude is not available on this page. Use the forms, or ask in the Cowork chat.");
+      } else {
+        S.chat.items.push({ role: "claude", status: "error", text: CHAT_COPY[code] || "Something went wrong reaching Claude. Try again." });
+      }
+    } finally {
+      if (S.chat.busy === ctl) S.chat.busy = null;
+      renderChat();
+      if (chatAvailable()) chatInput.focus();
+    }
+  }
+
+  function applyItem(item) {
+    flushEdits();
+    var r = WF.applyChanges(M(), item.changes);
+    item.status = r.done.length ? "applied" : "discarded";
+    item.lines = r.done;
+    item.failed = r.failed.map(function (f) { return f.why; });
+    item.live = false;
+    if (!r.done.length) { renderChat(); toast("Nothing could be applied to the map as it is now."); return; }
+    S.model = r.model;
+    S.dirty = true;
+    if (r.done.some(function (l) { return /^ran step|^started round/.test(l); })) S.viewRound = M().round;
+    if (S.selected && S.selected.indexOf("lane:") !== 0 && !stepBy(S.selected) && !sourceBy(S.selected)) S.selected = null;
+    resetWalk();
+    renderAll();
+    toast("Applied. Press Save to keep it.");
+  }
+
+  function toggleMic() {
+    var d = S.dictation;
+    if (!d) return;
+    if (chatMic.getAttribute("aria-pressed") === "true") { d.stop().catch(function () { /* none */ }); return; }
+    dictBase = chatInput.value ? chatInput.value.replace(/\s*$/, " ") : "";
+    dictFinal = "";
+    d.start().catch(function (e) {
+      if (e && e.code === "not_granted") { S.dictation = null; renderChat(); }
+      else toast("The microphone did not start. Type instead, or try again.");
+    });
+  }
+  function wireDictation(d) {
+    d.onPartial(function (p) { chatInput.value = dictBase + dictFinal + (p && p.text ? p.text : ""); });
+    d.onFinal(function (p) { if (p && p.text) dictFinal += p.text + " "; chatInput.value = dictBase + dictFinal; });
+    d.onState(function (st) {
+      var on = !!st && st.state === "listening";
+      chatMic.setAttribute("aria-pressed", on ? "true" : "false");
+      chatMic.classList.toggle("listening", on);
+    });
+  }
+
   /* ---------- everything ---------- */
   function renderAll() {
     renderModes();
-    renderHeader(); renderBanner(); renderProblems(); renderCanvas(); renderTrace(); renderPanel(); renderLog(); renderStatus();
+    renderHeader(); renderChat(); renderBanner(); renderProblems(); renderCanvas(); renderTrace(); renderPanel(); renderLog(); renderStatus();
   }
 
   document.addEventListener("keydown", function (e) {
@@ -826,6 +984,10 @@
   if (back && back.selected) S.selected = back.selected;
   if (back && (back.mode === "view" || back.mode === "edit")) S.mode = back.mode;
   if (back && back.round) S.viewRound = back.round;
+  if (back && back.chat && Array.isArray(back.chat.turns) && Array.isArray(back.chat.items)) {
+    S.chat.turns = back.chat.turns;
+    S.chat.items = back.chat.items;
+  }
   renderAll();
   if (back && back.scroll) wrapEl.scrollLeft = back.scroll;
 
@@ -835,8 +997,15 @@
   (async function connect() {
     var c = window.claude;
     if (!c || typeof c.use !== "function") { renderAll(); return; }
-    try { S.artifact = await withTimeout(c.use("artifact"), 10000); } catch (e) { S.artifact = null; }
+    function use(name) { return withTimeout(Promise.resolve().then(function () { return c.use(name); }), 10000).catch(function () { return null; }); }
+    var got = await Promise.all([use("artifact"), use("sample"), use("dictation")]);
+    S.artifact = got[0];
+    S.sample = typeof got[1] === "function" && typeof got[1].json === "function" ? got[1] : null;
     if (S.artifact) S.level = 2;
     renderAll();
+    if (got[2] && chatMic) {
+      try { wireDictation(got[2]); S.dictation = got[2]; } catch (e) { S.dictation = null; }
+      renderChat();
+    }
   })();
 })(WF);
