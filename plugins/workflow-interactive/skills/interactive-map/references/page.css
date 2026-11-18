@@ -168,3 +168,8 @@ svg.canvas { display: block; touch-action: none; user-select: none; font-family:
 .btn-go.stop { border-color: var(--bad); }
 .btn.mic.listening { border-color: var(--bad); background: var(--bad); color: #fff; }
 .chat-cost { margin: 6px 0 0; color: var(--faint); font-size: 12px; }
+.port-hit { fill: transparent; pointer-events: none; }
+.is-edit .port-hit { pointer-events: all; cursor: crosshair; }
+.is-edit .card:hover .port.out, .card.connect-from .port.out { r: 6.5; fill: var(--accent); stroke: var(--accent); }
+.connect-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 6 4; pointer-events: none; }
+.card.connect-target .card-body { stroke: var(--accent); stroke-width: 3; }

@@ -16,7 +16,9 @@ The page opens in **View** mode: each card shows how many times it has run,
 opening a card shows **What it did** on every run (each pass through a loop
 kept separately, with its outputs, note, and check), and **Play** replays the
 real runs in order. **Edit** mode is where the workflow changes: drag cards,
-change fields, add steps, sources, and lanes. The student looks first and
+drag from a card's right-hand dot to another card to add an arrow (an arrow
+back to an earlier step becomes a loop), change fields, add steps, sources,
+and lanes. The student looks first and
 decides when to edit.
 
 A box above the map, **Tell the map what to change**, takes the same edits

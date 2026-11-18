@@ -263,7 +263,72 @@
     var r = svg.getBoundingClientRect();
     return { x: (e.clientX - r.left) * (L.width / r.width), y: (e.clientY - r.top) * (L.height / r.height) };
   }
+  /* ---------- drag from a card's out port to another card: a new arrow ---------- */
+  var link = null;
+  function cardAt(x, y) {
+    var el = document.elementFromPoint(x, y);
+    var g = el && el.closest && el.closest(".card");
+    return g && wrapEl.contains(g) ? g : null;
+  }
+  function startLink(e, g) {
+    e.preventDefault();
+    e.stopPropagation();
+    var svg = wrapEl.querySelector("svg"), from = g.getAttribute("data-node"), n = L.nodes[from];
+    var x0 = n.x + L.g.card, y0 = n.y + L.g.card / 2;
+    var line = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    line.setAttribute("class", "connect-line");
+    line.setAttribute("d", "M" + x0 + " " + y0 + "L" + x0 + " " + y0);
+    svg.appendChild(line);
+    g.classList.add("connect-from");
+    link = { from: from, svg: svg, line: line, x0: x0, y0: y0, target: null, id: e.pointerId };
+    svg.setPointerCapture(e.pointerId);
+    svg.addEventListener("pointermove", onLinkMove);
+    svg.addEventListener("pointerup", onLinkUp);
+    svg.addEventListener("pointercancel", endLink);
+  }
+  function onLinkMove(e) {
+    if (!link) return;
+    var p = svgPoint(link.svg, e), dx = Math.max(40, Math.abs(p.x - link.x0) / 2);
+    link.line.setAttribute("d", "M" + link.x0 + " " + link.y0 + "C" + (link.x0 + dx) + " " + link.y0 + " " +
+      (p.x - dx) + " " + p.y + " " + p.x + " " + p.y);
+    var g = cardAt(e.clientX, e.clientY), id = g && g.getAttribute("data-node");
+    var ok = g && id !== link.from && id.indexOf("src-") !== 0 ? g : null;
+    if (ok !== link.target) {
+      if (link.target) link.target.classList.remove("connect-target");
+      link.target = ok;
+      if (ok) ok.classList.add("connect-target");
+    }
+  }
+  function endLink() {
+    if (!link) return;
+    var l = link;
+    link = null;
+    l.svg.removeEventListener("pointermove", onLinkMove);
+    l.svg.removeEventListener("pointerup", onLinkUp);
+    l.svg.removeEventListener("pointercancel", endLink);
+    try { l.svg.releasePointerCapture(l.id); } catch (e) { /* none */ }
+    l.line.remove();
+    wrapEl.querySelectorAll(".connect-from, .connect-target").forEach(function (g) { g.classList.remove("connect-from", "connect-target"); });
+  }
+  function onLinkUp(e) {
+    if (!link) return;
+    var from = link.from, g = cardAt(e.clientX, e.clientY), to = g && g.getAttribute("data-node");
+    endLink();
+    if (!to || to === from) return;
+    flushEdits();
+    var r = WF.connect(M(), from, to);
+    if (!r.done.length) { toast("No arrow added: " + r.failed[0].why + "."); return; }
+    S.model = r.model;
+    S.dirty = true;
+    afterChange();
+    toast(r.done[0].charAt(0).toUpperCase() + r.done[0].slice(1) + ". Press Save to keep it.");
+  }
+
   function onPointerDown(e) {
+    if (e.target.closest && e.target.closest(".port-hit") && S.mode === "edit" && !S.readOnly) {
+      startLink(e, e.target.closest(".card"));
+      return;
+    }
     var g = e.target.closest && e.target.closest(".card");
     if (!g) return;
     var svg = wrapEl.querySelector("svg"), id = g.getAttribute("data-node"), p = svgPoint(svg, e);
@@ -974,6 +1039,7 @@
 
   document.addEventListener("keydown", function (e) {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") { e.preventDefault(); save(); }
+    if (e.key === "Escape" && link) { endLink(); return; }
     if (e.key === "Escape" && S.selected) select(null);
   });
   window.addEventListener("beforeunload", function (e) {

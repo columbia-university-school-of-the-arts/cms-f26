@@ -59,7 +59,7 @@ class PluginTest(unittest.TestCase):
     def test_manifest(self):
         m = json.loads((PLUGIN / ".claude-plugin" / "plugin.json").read_text())
         self.assertEqual(m["name"], "workflow-interactive")
-        self.assertEqual(m["version"], "0.3.0")
+        self.assertEqual(m["version"], "0.4.0")
         self.assertEqual(m["skills"], ["./skills/interactive-map"])
         self.assertEqual(m["license"], "CC-BY-NC-SA-4.0")
 
@@ -592,6 +592,48 @@ class ChatChangesTest(unittest.TestCase):
         self.assertEqual(r[1]["content"], "m24")
         self.assertEqual(r[1]["role"], "user")
         self.assertEqual(r[-1]["role"], "user")
+
+
+def connect(frm, to, base=None):
+    return run_js("(function(){var m=WF.normalize(" + J(base or LOOP) + "); var r=WF.connect(m," + J(frm) + "," + J(to) +
+                  ",'2026-11-18'); return {done:r.done, failed:r.failed.map(function(f){return f.why;}),"
+                  " arrows:r.model.arrows.map(function(a){return [a.from,a.to,a.loop];})};})()")
+
+
+@unittest.skipUnless(HAS_NODE, "node not installed")
+class ConnectTest(unittest.TestCase):
+    def test_forward_arrow(self):
+        r = connect("3", "5")
+        self.assertEqual(r["done"], ["added an arrow from 3 to 5"])
+        self.assertIn(["3", "5", False], r["arrows"])
+
+    def test_backward_arrow_is_a_loop(self):
+        r = connect("5", "1")
+        self.assertEqual(r["done"], ["added a loop arrow from 5 back to 1"])
+        self.assertIn(["5", "1", True], r["arrows"])
+
+    def test_source_to_step(self):
+        r = connect("src-a", "3")
+        self.assertIn(["src-a", "3", False], r["arrows"])
+
+    def test_refused(self):
+        for frm, to, why in (("1", "2", "already"), ("2", "2", "itself"), ("1", "src-a", "source"), ("1", "9", "no step")):
+            r = connect(frm, to)
+            self.assertEqual(r["done"], [], (frm, to))
+            self.assertIn(why, r["failed"][0], (frm, to))
+            self.assertEqual(len(r["arrows"]), len(LOOP["arrows"]))
+
+    def test_cards_have_a_grab_area_on_the_out_port(self):
+        sample = json.loads((REF / "sample.json").read_text())
+        svg = run_js("(function(){var m=WF.normalize(" + J(sample) + "); return WF.renderSvg(m, WF.layout(m));})()",
+                     (REF / "render.js").read_text())
+        self.assertEqual(svg.count('class="port-hit"'), len(sample["steps"]) + len(sample["sources"]))
+
+    def test_page_wires_the_drag(self):
+        page = TEMPLATE.read_text()
+        for needle in ("WF.connect", "connect-line", "connect-target", ".is-edit .port-hit"):
+            self.assertIn(needle, page)
+        self.assertIn("right-hand dot", (SKILL / "SKILL.md").read_text())
 
 
 if __name__ == "__main__":
