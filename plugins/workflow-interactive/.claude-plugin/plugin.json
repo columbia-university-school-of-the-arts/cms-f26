@@ -1,0 +1,12 @@
+{
+  "name": "workflow-interactive",
+  "version": "0.1.0",
+  "description": "An interactive map of any workflow you draw: swimlanes, sources with real icons, a walkthrough with a debug trace, and pull, commit, and push to your fleet repository.",
+  "author": {
+    "name": "Behrang Garakani"
+  },
+  "license": "CC-BY-NC-SA-4.0",
+  "skills": [
+    "./skills/interactive-map"
+  ]
+}

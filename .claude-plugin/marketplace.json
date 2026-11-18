@@ -24,6 +24,11 @@
       "name": "cms-workflow",
       "source": "./plugins/cms-workflow",
       "description": "Map your research workflow as a page you keep: each step, who does it, who checks it, and how to run it in Cowork."
+    },
+    {
+      "name": "workflow-interactive",
+      "source": "./plugins/workflow-interactive",
+      "description": "An interactive map of any workflow you draw: swimlanes, sources with real icons, a walkthrough with a debug trace, and pull, commit, and push to your fleet repository."
     }
   ]
 }
