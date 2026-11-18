@@ -384,7 +384,7 @@ class PageTest(unittest.TestCase):
         self.assertEqual([s["icon"] for s in d["sources"]], ["internetarchive", "themoviedatabase", "mic"])
         self.assertEqual(t.count('<div id="app"></div><script data-wf>'), 1)
         self.assertEqual(t.count("</script><script data-wf>"), 3)
-        self.assertEqual(t.count("<style data-wf>"), 1)
+        self.assertEqual(t.count("</title><style data-wf>"), 1)
         self.assertTrue(t.startswith("<title>"))
 
     def test_template_supports_dark_phone_and_motion(self):
