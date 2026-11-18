@@ -160,7 +160,10 @@ function renderWorkflow(d) {
     var out = arrows.filter(function (a) { return key(a.from) === key(s.n); });
     h += '<p class="arrows">' + (out.length ? out.map(function (a) { return arrowText(a, order); }).join(' &middot; ') : 'ends here') + '</p>';
   });
-  var stray = arrows.filter(function (a) { return order[key(a.from)] === undefined || order[key(a.to)] === undefined; });
+  var stray = arrows.filter(function (a) {
+    var fromSource = String(key(a.from)).indexOf("src-") === 0;
+    return (order[key(a.from)] === undefined && !fromSource) || order[key(a.to)] === undefined;
+  });
   if (stray.length) {
     h += '<div class="unsure-list"><strong>UNSURE arrows</strong> (a step they name is not on the map)<ul>';
     stray.forEach(function (a) { h += '<li>' + esc(a.from) + ' to ' + esc(a.to) + '</li>'; });
