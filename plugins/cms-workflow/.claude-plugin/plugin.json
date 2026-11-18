@@ -1,6 +1,6 @@
 {
   "name": "cms-workflow",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Map your research workflow as a page you keep: each step, who does it, who checks it, and how to run it in Cowork.",
   "author": {
     "name": "Behrang Garakani"

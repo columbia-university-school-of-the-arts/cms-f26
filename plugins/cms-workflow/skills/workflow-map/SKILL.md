@@ -83,6 +83,13 @@ The page keeps the whole workflow in one JSON block,
   the step it starts from.
 - `changes`: the change log, newest first, each with a `date` and `what`.
 
+Keep every field you do not know exactly as it is. A map made or opened by
+the `workflow-interactive` plugin also carries `id`, `kind`, `repo`, `lanes`,
+`sources`, `icons`, `git`, and, on steps and arrows, `lane`, `col`, `icon`,
+and `label`; change none of them, drop none of them, and treat an arrow whose
+`from` starts with `src-` as coming from a data source, not as an UNSURE
+arrow. The student keeps working on that map with `workflow-interactive`.
+
 The block must stay valid JSON, or the page shows an error in place of the
 map: escape double quotes inside strings as `\"`, leave no trailing commas,
 and write `<\/` wherever a string contains `</`, so that a student's

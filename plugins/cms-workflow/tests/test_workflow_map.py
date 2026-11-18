@@ -33,7 +33,7 @@ class PluginTest(unittest.TestCase):
     def test_manifest(self):
         m = json.loads((PLUGIN / ".claude-plugin" / "plugin.json").read_text())
         self.assertEqual(m["name"], "cms-workflow")
-        self.assertEqual(m["version"], "0.1.1")
+        self.assertEqual(m["version"], "0.1.2")
         self.assertEqual(m["skills"], ["./skills/workflow-map"])
         self.assertEqual(m["license"], "CC-BY-NC-SA-4.0")
 
@@ -122,6 +122,10 @@ class RobustRenderTest(unittest.TestCase):
                                               [{"from": 1, "to": "2a", "loop": False}]))
         self.assertIn("goes to 2a", out)
 
+    def test_arrow_from_a_source_is_not_unsure(self):
+        out = render_with_node(TEMPLATE, map_([step_(1, "A")], [{"from": "src-tmdb", "to": 1, "loop": False}]))
+        self.assertNotIn("UNSURE arrows", out)
+
     def test_arrow_to_missing_step_is_listed(self):
         out = render_with_node(TEMPLATE, map_([step_(1, "A")], [{"from": 1, "to": 9, "loop": False}]))
         self.assertIn("UNSURE arrows", out)
@@ -144,6 +148,12 @@ class RobustRenderTest(unittest.TestCase):
 
 
 class SkillRobustnessTest(unittest.TestCase):
+    def test_unknown_fields_are_kept(self):
+        text = (SKILL / "SKILL.md").read_text()
+        self.assertIn("Keep every field you do not know", text)
+        for field in ("repo", "lanes", "sources", "icons", "git"):
+            self.assertIn("`" + field + "`", text)
+
     def test_existing_map_is_read_first(self):
         text = (SKILL / "SKILL.md").read_text()
         reading = text[text.index("## What to read"):text.index("## The rules")]
