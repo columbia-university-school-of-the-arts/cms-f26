@@ -690,7 +690,7 @@
   }
 
   /* ---------- Git ---------- */
-  function gh() { return WF.makeAdapter(S.mcp, Object.assign({}, WF.GITHUB, M().connector || {})); }
+  function gh() { return WF.makeAdapter(S.mcp, WF.connectorConfig(M().connector)); }
   async function refreshHead() {
     if (S.level < 3) return;
     try { S.head = await gh().head(M().repo); S.gitMsg = ""; }

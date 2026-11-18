@@ -13,7 +13,7 @@ SCRIPTS = ["icons.js", "core.js", "render.js", "ui.js"]
 
 
 def data_text(obj):
-    return json.dumps(obj, indent=2, ensure_ascii=False).replace("</", "<\\/")
+    return json.dumps(obj, indent=2, ensure_ascii=False).replace("<", "\\u003c")
 
 
 def build():

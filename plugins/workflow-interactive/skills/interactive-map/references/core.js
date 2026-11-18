@@ -167,7 +167,7 @@ var WF = (function () {
   }
 
   function serializeData(model) {
-    return JSON.stringify(stripInternal(model), null, 2).replace(/<\//g, "<\\/");
+    return JSON.stringify(stripInternal(model), null, 2).replace(/</g, "\\u003c");
   }
 
   /* ---------- walkthrough ---------- */
@@ -266,6 +266,22 @@ var WF = (function () {
   /* ---------- Git: pull, commit, push ---------- */
 
   var GITHUB = { server: "GitHub", tools: { read: "get_file_contents", write: "push_files", head: "list_commits" } };
+  var ALLOWED_TOOLS = {
+    read: ["get_file_contents", "get_file", "read_file"],
+    write: ["push_files", "create_or_update_file"],
+    head: ["list_commits", "get_commit", "get_branch"]
+  };
+
+  /* A map's data may name the connector, as the skill records it, but only
+     a known GitHub tool for each job; anything else falls back to the default. */
+  function connectorConfig(override) {
+    var o = isObj(override) ? override : {}, t = isObj(o.tools) ? o.tools : {}, tools = {};
+    Object.keys(ALLOWED_TOOLS).forEach(function (job) {
+      tools[job] = ALLOWED_TOOLS[job].indexOf(t[job]) >= 0 ? t[job] : GITHUB.tools[job];
+    });
+    var server = typeof o.server === "string" && /^[A-Za-z0-9 _.:-]{1,64}$/.test(o.server) ? o.server : GITHUB.server;
+    return { server: server, tools: tools };
+  }
 
   function paths(model) {
     var base = "workflow/" + model.id + "/";
@@ -429,7 +445,7 @@ var WF = (function () {
   }
 
   var api = {
-    DEFAULT_LANES: DEFAULT_LANES, GITHUB: GITHUB, normalize: normalize, parse: parse, serializeData: serializeData,
+    DEFAULT_LANES: DEFAULT_LANES, GITHUB: GITHUB, connectorConfig: connectorConfig, normalize: normalize, parse: parse, serializeData: serializeData,
     laneForWho: laneForWho, whoForLane: whoForLane, guessIcon: guessIcon, slug: slug, esc: esc, clone: clone,
     order: order, walk: walk, trace: trace, rebuild: rebuild, paths: paths, mapMd: mapMd, mapFromMd: mapFromMd,
     uncommitted: uncommitted, commit: commit, status: status, push: push, pull: pull,

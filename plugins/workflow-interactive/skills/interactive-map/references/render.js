@@ -52,7 +52,8 @@
   function iconMarkup(model, name, x, y, size, color) {
     var custom = model.icons && model.icons[name];
     var brand = WF_ICONS.brand[name], generic = WF_ICONS.generic[name];
-    if (custom && custom.path) brand = { path: custom.path, color: custom.color || color };
+    if (custom && custom.path) brand = { path: custom.path, color: /^#[0-9a-fA-F]{3,8}$/.test(custom.color || "") ? custom.color : color };
+    else if (custom && typeof custom.svg === "string" && !/<\s*(script|foreignObject|image|a)\b|\son\w+\s*=|javascript:/i.test(custom.svg)) generic = { svg: custom.svg };
     if (brand) {
       var k = size / 24, r = size / 2 + 5;
       return '<g class="ico brand"><circle cx="' + (x + size / 2) + '" cy="' + (y + size / 2) + '" r="' + r +

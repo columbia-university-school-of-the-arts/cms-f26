@@ -222,6 +222,22 @@ class RebuildTest(unittest.TestCase):
         self.assertEqual(r["back"], "A </script><b>x</b>")
         self.assertNotIn("problems", json.loads(r["raw"]))
 
+    def test_comment_and_script_openers_are_escaped(self):
+        m = old_map([step(1, "<!--<script>x")], [])
+        r = run_js("(function(){var t=WF.serializeData(WF.normalize(" + J(m) + "));"
+                   " return {raw: t, back: WF.parse(t).model.steps[0].name};})()")
+        self.assertNotIn("<", r["raw"])
+        self.assertEqual(r["back"], "<!--<script>x")
+
+    def test_connector_override_is_limited(self):
+        r = run_js("[WF.connectorConfig({server:'GitHub (work)', tools:{read:'get_file', write:'delete_repository'}}),"
+                   " WF.connectorConfig({server:'x\\u003c/y', tools:'nope'}), WF.connectorConfig(null)]")
+        self.assertEqual(r[0], {"server": "GitHub", "tools": {"read": "get_file", "write": "push_files",
+                                                              "head": "list_commits"}})
+        self.assertEqual(r[1], {"server": "GitHub", "tools": {"read": "get_file_contents", "write": "push_files",
+                                                              "head": "list_commits"}})
+        self.assertEqual(r[2]["server"], "GitHub")
+
     def test_rebuild_keeps_styles_and_scripts(self):
         parts = {"reset": "*{margin:0}", "title": "My <map>",
                  "styles": ["<style data-wf>.lane{fill:red}</style>"],
@@ -419,6 +435,62 @@ class PageTest(unittest.TestCase):
         r = run_js("WF.laneColor(WF.normalize({lanes:[{id:'x',name:'X',kind:'me',color:'red;}</style>'}]}), 'x')",
                    (REF / "render.js").read_text())
         self.assertEqual(r, "#c2410c")
+
+
+@unittest.skipUnless(HAS_NODE, "node not installed")
+class CustomIconTest(unittest.TestCase):
+    def icon(self, entry):
+        return run_js("WF.iconMarkup(WF.normalize({icons:{'k':" + J(entry) + "}}), 'k', 0, 0, 24, '#123456')",
+                      (REF / "render.js").read_text())
+
+    def test_custom_brand_path(self):
+        out = self.icon({"path": "M0 0h24v24H0z", "color": "#FF0000"})
+        self.assertIn('d="M0 0h24v24H0z"', out)
+        self.assertIn('fill="#FF0000"', out)
+
+    def test_custom_stroked_svg(self):
+        self.assertIn('<circle cx="12" cy="12" r="9"/>', self.icon({"svg": '<circle cx="12" cy="12" r="9"/>'}))
+
+    def test_unsafe_svg_falls_back(self):
+        out = self.icon({"svg": '<image href="x" onload="alert(1)"/>'})
+        self.assertNotIn("onload", out)
+
+    def test_bad_colour_is_ignored(self):
+        self.assertNotIn("javascript", self.icon({"path": "M0 0", "color": "javascript:x"}))
+
+
+class SkillTest(unittest.TestCase):
+    def text(self):
+        return (SKILL / "SKILL.md").read_text()
+
+    def test_frontmatter(self):
+        self.assertRegex(self.text(), r"(?m)^name: interactive-map\s*$")
+        self.assertRegex(self.text(), r"(?m)^description: ")
+
+    def test_skill_states_the_rules(self):
+        for needle in ("UNSURE", "no step", "you_or_it", "credited", "mine", "change log", "workflow/<id>/",
+                       "Copy the map", "Pull", "Commit", "Push", "Save", "simple-icons", "16.36.0", "icons",
+                       "runs.jsonl", "map.html", "capabilities", "list the workflows", "kind", "data-wf",
+                       "cms-workflow", "get_file_contents", "push_files", "list_commits"):
+            self.assertIn(needle, self.text())
+
+    def test_existing_maps_are_read_first(self):
+        t = self.text()
+        reading = t[t.index("## What to read"):t.index("## The rules")]
+        self.assertLess(reading.index("Existing maps"), reading.index("photo"))
+
+    def test_skill_names_icons_the_page_has(self):
+        text = (REF / "icons.js").read_text()
+        icons = json.loads(text[text.index("{"):text.rindex("}") + 1])
+        for name in re.findall(r"`([a-z0-9-]+)`", self.text()[self.text().index("## Icons"):self.text().index("**Getting a new icon")]):
+            if name in ("icon",):
+                continue
+            self.assertTrue(name in icons["brand"] or name in icons["generic"], name)
+
+    def test_connect_github_note(self):
+        t = (REF / "connect-github.md").read_text()
+        for needle in ("Settings", "Connectors", "GitHub", "fleet repository", "Pull", "Commit", "Push", "Save"):
+            self.assertIn(needle, t)
 
 
 if __name__ == "__main__":
