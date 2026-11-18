@@ -90,14 +90,8 @@ var WF = (function () {
     m.kind = str(d.kind);
     var r = isObj(d.repo) ? d.repo : {};
     m.repo = Object.assign({}, r, { owner: str(r.owner), name: str(r.name), branch: str(r.branch) || "main" });
-    var g = isObj(d.git) ? d.git : {};
-    m.git = {
-      pulled: str(g.pulled),
-      committed: Math.max(0, Number(g.committed) || 0),
-      pending: (Array.isArray(g.pending) ? g.pending : []).filter(isObj).map(function (p) {
-        return { message: str(p.message), date: str(p.date), changes: arr(p.changes), snapshot: isObj(p.snapshot) ? p.snapshot : null };
-      })
-    };
+    delete m.git;
+    delete m.connector;
     m.icons = isObj(d.icons) ? d.icons : {};
     m.lanes = normLanes(d.lanes);
     var laneIds = {};
@@ -377,25 +371,7 @@ var WF = (function () {
       (p.scripts || []).join("") + "</body></html>";
   }
 
-  /* ---------- Git: pull, commit, push ---------- */
-
-  var GITHUB = { server: "GitHub", tools: { read: "get_file_contents", write: "push_files", head: "list_commits" } };
-  var ALLOWED_TOOLS = {
-    read: ["get_file_contents", "get_file", "read_file"],
-    write: ["push_files", "create_or_update_file"],
-    head: ["list_commits", "get_commit", "get_branch"]
-  };
-
-  /* A map's data may name the connector, as the skill records it, but only
-     a known GitHub tool for each job; anything else falls back to the default. */
-  function connectorConfig(override) {
-    var o = isObj(override) ? override : {}, t = isObj(o.tools) ? o.tools : {}, tools = {};
-    Object.keys(ALLOWED_TOOLS).forEach(function (job) {
-      tools[job] = ALLOWED_TOOLS[job].indexOf(t[job]) >= 0 ? t[job] : GITHUB.tools[job];
-    });
-    var server = typeof o.server === "string" && /^[A-Za-z0-9 _.:-]{1,64}$/.test(o.server) ? o.server : GITHUB.server;
-    return { server: server, tools: tools };
-  }
+  /* ---------- files in the fleet repository ---------- */
 
   function paths(model) {
     var base = "workflow/" + model.id + "/";
@@ -408,26 +384,7 @@ var WF = (function () {
 
   function mapFromMd(text) {
     var m = /```json\s*\n([\s\S]*?)\n```/.exec(str(text));
-    return m ? parse(m[1]) : { error: "The repository's map.md has no JSON block." };
-  }
-
-  function uncommitted(model) { return Math.max(0, model.changes.length - model.git.committed); }
-
-  function snapshotOf(model) {
-    var s = stripInternal(model);
-    delete s.git;
-    return s;
-  }
-
-  function commit(model, message, date) {
-    var m = clone(stripInternal(model));
-    m = normalize(m);
-    var n = uncommitted(m);
-    var lines = m.changes.slice(0, n).map(function (c) { return c.what; });
-    m.git.committed = m.changes.length;
-    m.git.pending.push({ message: str(message) || lines[0] || "update the map", date: str(date) || today(),
-      changes: lines, snapshot: snapshotOf(m) });
-    return m;
+    return m ? parse(m[1]) : { error: "The map.md has no JSON block." };
   }
 
   function today() {
@@ -435,194 +392,12 @@ var WF = (function () {
     return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
   }
 
-  function status(model, head) {
-    var behind = !!head && !!model.git.pulled && head !== model.git.pulled;
-    var pending = model.git.pending.length, unc = uncommitted(model);
-    if (behind) return pending || unc ? "diverged" : "behind";
-    if (pending) return "ahead";
-    if (unc) return "changes";
-    return "clean";
-  }
-
-  function errMessage(e) { return str(e && (e.message || e.code)) || "The connector did not answer."; }
-
-  async function push(model, gh, pageHtml) {
-    var m = normalize(clone(stripInternal(model)));
-    if (!m.git.pending.length) return { model: m, ok: true, message: "Nothing to push." };
-    if (!m.repo.owner || !m.repo.name) return { model: m, ok: false, message: "No repository is set for this map." };
-    var p = paths(m), head;
-    try {
-      head = await gh.head(m.repo);
-      if (m.git.pulled ? head !== m.git.pulled : head && await gh.read(m.repo, p.md)) {
-        return { model: m, ok: false, message: "The repository has newer commits. Pull first." };
-      }
-    } catch (e) { return { model: m, ok: false, message: errMessage(e) }; }
-    while (m.git.pending.length) {
-      var c = m.git.pending[0];
-      var snap = normalize(Object.assign({}, c.snapshot || snapshotOf(m), {
-        git: { pulled: head || "", committed: (c.snapshot || m).changes ? (c.snapshot || m).changes.length : 0, pending: [] }
-      }));
-      try {
-        var files = [{ path: p.md, content: mapMd(snap) }, { path: p.html, content: pageHtml(snap) }];
-        if (snap.runs.length) files.push({ path: p.runs, content: runsJsonl(snap) });
-        head = await gh.write(m.repo, files, c.message);
-      } catch (e) { return { model: m, ok: false, message: errMessage(e) }; }
-      m.git.pending.shift();
-      m.git.pulled = str(head);
-    }
-    return { model: m, ok: true, message: "Pushed to " + m.repo.owner + "/" + m.repo.name + "." };
-  }
-
-  async function pull(model, gh) {
-    var m = normalize(clone(stripInternal(model))), head, file;
-    if (!m.repo.owner || !m.repo.name) return { model: m, ok: false, message: "No repository is set for this map." };
-    try {
-      head = await gh.head(m.repo);
-      file = await gh.read(m.repo, paths(m).md);
-    } catch (e) { return { model: m, ok: false, message: errMessage(e) }; }
-    if (!file) return { model: m, ok: false, message: "Nothing in the repository yet. Commit and push to create it." };
-    var got = mapFromMd(file.text);
-    if (got.error) return { model: m, ok: false, message: got.error };
-    var theirs = got.model;
-    theirs.git = { pulled: str(head), committed: theirs.changes.length, pending: [] };
-    theirs.repo = m.repo;
-    if (m.git.pending.length || uncommitted(m)) {
-      return { model: m, ok: true, choice: { mine: m, theirs: theirs }, message: "Both the page and the repository have changed. Keep one." };
-    }
-    return { model: theirs, ok: true, message: "Pulled from " + m.repo.owner + "/" + m.repo.name + "." };
-  }
-
-  function keepAfterChoice(choice, which, date) {
-    var keep = normalize(clone(stripInternal(which === "theirs" ? choice.theirs : choice.mine)));
-    var other = which === "theirs" ? choice.mine : choice.theirs;
-    var setAside = (which === "theirs" ? "set aside the page's changes: " : "set aside the repository's changes: ") +
-      other.changes.slice(0, 3).map(function (c) { return c.what; }).join("; ");
-    keep.changes.unshift({ date: str(date) || today(), what: setAside });
-    if (which === "mine") keep.git.pulled = choice.theirs.git.pulled;
-    return keep;
-  }
-
-  /* ---------- connector adapter ---------- */
-
-  function findSha(v, depth) {
-    if (depth > 4 || v === null || v === undefined) return "";
-    if (Array.isArray(v)) return v.length ? findSha(v[0], depth + 1) : "";
-    if (isObj(v)) {
-      if (typeof v.sha === "string") return v.sha;
-      var keys = ["object", "commit", "commits", "data", "ref"];
-      for (var i = 0; i < keys.length; i++) { var s = findSha(v[keys[i]], depth + 1); if (s) return s; }
-    }
-    return "";
-  }
-
-  function decode64(b) {
-    var bin = atob(str(b).replace(/\s+/g, ""));
-    var bytes = new Uint8Array(bin.length);
-    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return new TextDecoder().decode(bytes);
-  }
-
-  function fileText(result) {
-    var blocks = (result && result.content) || [];
-    for (var i = 0; i < blocks.length; i++) {
-      var b = blocks[i];
-      if (b && b.type === "resource" && b.resource && typeof b.resource.text === "string") return b.resource.text;
-    }
-    var p = result && result.payload;
-    if (isObj(p) && typeof p.content === "string") return p.encoding === "base64" ? decode64(p.content) : p.content;
-    if (isObj(p) && typeof p.text === "string") return p.text;
-    if (typeof p === "string") return p;
-    return null;
-  }
-
-  function notFound(e) { return /not.?found|404|409|empty|no commit/i.test(errMessage(e)); }
-
-  function makeAdapter(mcp, config) {
-    var c = config || GITHUB;
-    return {
-      head: async function (repo) {
-        try {
-          var r = await mcp.callTool(c.server, c.tools.head, { owner: repo.owner, repo: repo.name, sha: repo.branch, perPage: 1 });
-          return findSha(r && r.payload, 0) || null;
-        } catch (e) { if (notFound(e)) return null; throw e; }
-      },
-      read: async function (repo, path) {
-        try {
-          var r = await mcp.callTool(c.server, c.tools.read, { owner: repo.owner, repo: repo.name, path: path, ref: repo.branch });
-          var text = fileText(r);
-          return text === null ? null : { text: text };
-        } catch (e) { if (notFound(e)) return null; throw e; }
-      },
-      write: async function (repo, files, message) {
-        if (c.tools.write === "create_or_update_file") {
-          /* One file per call, and an existing file needs its blob sha. */
-          var last = "";
-          for (var i = 0; i < files.length; i++) {
-            var f = files[i], sha = "";
-            try {
-              var got = await mcp.callTool(c.server, c.tools.read, { owner: repo.owner, repo: repo.name, path: f.path, ref: repo.branch });
-              sha = (got && isObj(got.payload) && typeof got.payload.sha === "string") ? got.payload.sha : "";
-            } catch (e) { if (!notFound(e)) throw e; }
-            var input = { owner: repo.owner, repo: repo.name, branch: repo.branch, path: f.path, content: f.content, message: message };
-            if (sha) input.sha = sha;
-            var w = await mcp.callTool(c.server, c.tools.write, input);
-            last = findSha(w && w.payload && w.payload.commit ? w.payload.commit : w && w.payload, 0) || last;
-          }
-          return last;
-        }
-        var r = await mcp.callTool(c.server, c.tools.write, { owner: repo.owner, repo: repo.name, branch: repo.branch, files: files, message: message });
-        return findSha(r && r.payload, 0);
-      }
-    };
-  }
-
-  /* ---------- Check GitHub: read-only, never writes ---------- */
-
-  async function checkGithub(mcp, model) {
-    var lines = [], cfg = connectorConfig(model.connector);
-    function line(label, ok, detail) { lines.push({ label: label, ok: ok, detail: detail }); return ok; }
-    function done() { return { ok: lines.every(function (l) { return l.ok; }), lines: lines }; }
-    if (!line("Connector on this page", !!mcp, mcp ? "This page can call your connectors."
-      : "GitHub is not connected to this page. Turn GitHub on in the chat's tools menu, then ask Claude to republish the map with GitHub.")) return done();
-    var r = model.repo;
-    if (!line("Repository", !!(r.owner && r.name), r.owner && r.name ? r.owner + "/" + r.name + ", branch " + r.branch
-      : "No repository is set on this map. Ask Claude to add your fleet repository.")) return done();
-    var listed;
-    try { listed = await mcp.listTools(cfg.server); }
-    catch (e) { line("GitHub connector", false, "Could not list the connector: " + errMessage(e)); return done(); }
-    var srv = ((listed && listed.servers) || []).filter(function (x) { return x.server === cfg.server; })[0];
-    if (!srv) {
-      line("GitHub connector", false, "No connector named \u201c" + cfg.server + "\u201d is connected. In Claude, open Settings, then Connectors, and connect GitHub.");
-      return done();
-    }
-    if (srv.authStatus === "needs_reauth") {
-      line("GitHub connector", false, "GitHub needs you to sign in again: Settings, then Connectors, then GitHub.");
-      return done();
-    }
-    line("GitHub connector", true, "\u201c" + cfg.server + "\u201d is connected" + (srv.authStatus === "unknown" ? "; Claude may ask you to allow it" : "") + ".");
-    var names = (srv.tools || []).map(function (t) { return t.name; });
-    var missing = ["read", "write", "head"].map(function (j) { return cfg.tools[j]; }).filter(function (n) { return names.indexOf(n) < 0; });
-    line("Tools", !missing.length, missing.length
-      ? "Missing: " + missing.join(", ") + ". The connector offers: " + (names.join(", ") || "nothing") +
-        ". Ask Claude to set the connector's tool names on this map and republish."
-      : "Reading, writing, and the latest commit: " + cfg.tools.read + ", " + cfg.tools.write + ", " + cfg.tools.head + ".");
-    var gh = makeAdapter(mcp, cfg), head, file;
-    try {
-      head = await gh.head(r);
-      file = await gh.read(r, paths(model).md);
-    } catch (e) { line("Reading the repository", false, errMessage(e)); return done(); }
-    line("Reading the repository", true, (head ? "Latest commit " + String(head).slice(0, 7) + " on " + r.branch : "The branch has no commits yet") +
-      (file ? "; the map is in " + paths(model).md + "." : "; the map is not in the repository yet. Push puts it there."));
-    return done();
-  }
-
   var api = {
-    DEFAULT_LANES: DEFAULT_LANES, GITHUB: GITHUB, connectorConfig: connectorConfig, normalize: normalize, parse: parse, serializeData: serializeData,
+    DEFAULT_LANES: DEFAULT_LANES, normalize: normalize, parse: parse, serializeData: serializeData,
     laneForWho: laneForWho, whoForLane: whoForLane, guessIcon: guessIcon, slug: slug, esc: esc, clone: clone,
     order: order, walk: walk, trace: trace, rebuild: rebuild, paths: paths, mapMd: mapMd, mapFromMd: mapFromMd,
-    uncommitted: uncommitted, commit: commit, recordRun: recordRun, newRound: newRound, runsFor: runsFor,
-    rounds: rounds, runEvents: runEvents, checkGithub: checkGithub, runTrace: runTrace, runsJsonl: runsJsonl, status: status, push: push, pull: pull,
-    keepAfterChoice: keepAfterChoice, makeAdapter: makeAdapter, today: today, stripInternal: stripInternal
+    recordRun: recordRun, newRound: newRound, runsFor: runsFor, rounds: rounds, runEvents: runEvents,
+    runTrace: runTrace, runsJsonl: runsJsonl, today: today, stripInternal: stripInternal
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   return api;

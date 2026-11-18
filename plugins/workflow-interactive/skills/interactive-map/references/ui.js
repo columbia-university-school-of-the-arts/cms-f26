@@ -29,8 +29,8 @@
   }
 
   var S = {
-    model: parsed.model, dirty: false, selected: null, level: 1, artifact: null, mcp: null,
-    readOnly: false, head: null, gitMsg: "", choice: null, walk: null, edits: {}, saving: false,
+    model: parsed.model, dirty: false, selected: null, level: 1, artifact: null,
+    readOnly: false, walk: null, edits: {}, saving: false,
     mode: "view", viewRound: null
   };
   var M = function () { return S.model; };
@@ -54,9 +54,7 @@
     S.dirty = true;
   }
   function renormalize() {
-    var keepGit = M().git;
     S.model = WF.normalize(WF.stripInternal(M()));
-    S.model.git = keepGit;
   }
   function flushEdits() {
     var keys = Object.keys(S.edits);
@@ -113,11 +111,9 @@
   var wrapEl = h("div", { "class": "canvas-wrap" });
   var traceEl = h("section", { "class": "trace" });
   var panel = h("aside", { "class": "panel", hidden: true, "aria-label": "Details" });
-  var gitPanel = h("div", { "class": "git-choice", hidden: true });
-  var checkEl = h("div", { "class": "gh-check", hidden: true, role: "status" });
   var logEl = h("section", { "class": "log" });
   var main = h("div", { "class": "main" }, [h("div", { "class": "work" }, [wrapEl, traceEl]), panel]);
-  [header, toolbar, banner, checkEl, gitPanel, problems, main, logEl, h("div", { "class": "toast", role: "status" })].forEach(function (e) { app.appendChild(e); });
+  [header, toolbar, banner, problems, main, logEl, h("div", { "class": "toast", role: "status" })].forEach(function (e) { app.appendChild(e); });
   function canvasWrap() { return wrapEl; }
 
   /* ---------- header and toolbar ---------- */
@@ -133,8 +129,6 @@
   }
 
   var statusEl = h("span", { "class": "status", "aria-live": "polite" });
-  var gitStatusEl = h("span", { "class": "git-status" });
-  var commitInput = h("input", { type: "text", "class": "commit-msg", placeholder: "Commit message", "aria-label": "Commit message" });
   var btn = {};
   function button(key, label, onclick, title) {
     btn[key] = h("button", { type: "button", "class": "btn btn-" + key, title: title || label, onclick: onclick }, [label]);
@@ -164,14 +158,8 @@
     ]));
     toolbar.appendChild(h("div", { "class": "group" }, [
       button("save", "Save", save, "Save this page (Cmd or Ctrl + S)"), statusEl,
-      button("copy", "Copy the map", copyMap, "Copy the map's data to paste into the chat"),
-      button("check", "Check GitHub", checkGithub, "See whether this page can reach your fleet repository. Reads only.")
+      button("copy", "Copy the map", copyMap, "Copy the map's data to paste into the chat")
     ]));
-    var g = h("div", { "class": "group gitgroup" }, [
-      h("span", { "class": "git-label", text: "GitHub" }), gitStatusEl, button("pull", "Pull", doPull),
-      commitInput, button("commit", "Commit", doCommit), button("push", "Push", doPush)
-    ]);
-    toolbar.appendChild(g);
     renderStatus();
   }
 
@@ -214,34 +202,13 @@
     statusEl.textContent = S.readOnly ? "read only" : S.dirty || Object.keys(S.edits).length ? "unsaved changes" : "saved";
     statusEl.className = "status" + (S.dirty || Object.keys(S.edits).length ? " dirty" : "");
     btn.save.disabled = S.level < 2 || S.readOnly;
-    var gitOn = S.level >= 3;
-    toolbar.querySelector(".gitgroup").hidden = !gitOn;
-    if (gitOn) {
-      var st = WF.status(M(), S.head), unc = WF.uncommitted(M()) + Object.keys(S.edits).length;
-      var words = {
-        clean: "up to date", changes: unc + (unc === 1 ? " change" : " changes") + " not committed",
-        ahead: M().git.pending.length + (M().git.pending.length === 1 ? " commit" : " commits") + " to push",
-        behind: "the repository has newer commits", diverged: "the page and the repository have both changed"
-      };
-      gitStatusEl.textContent = S.gitMsg || words[st];
-      gitStatusEl.className = "git-status st-" + st;
-      if (!commitInput.value || commitInput.dataset.auto === "1") {
-        var lines = M().changes.slice(0, WF.uncommitted(M())).map(function (c) { return c.what; });
-        commitInput.value = lines[0] || "";
-        commitInput.dataset.auto = "1";
-      }
-      btn.commit.disabled = S.readOnly || unc === 0;
-      btn.push.disabled = S.readOnly || !M().git.pending.length;
-      btn.pull.disabled = S.readOnly;
-    }
   }
-  commitInput.addEventListener("input", function () { commitInput.dataset.auto = "0"; });
+
 
   function renderBanner() {
     var msg = "";
     if (S.level === 1) msg = "Changes on this page are not kept here. Copy the map and paste it into the chat to keep them.";
     else if (S.readOnly) msg = "You can look at this map but not change it.";
-    else if (S.level === 2 && M().repo.owner) msg = "GitHub is not connected to this page, so Pull, Commit, and Push are hidden. The page still saves itself.";
     banner.hidden = !msg;
     banner.innerHTML = "";
     if (msg) {
@@ -809,9 +776,8 @@
     logEl.appendChild(h("h2", { text: "Change log" }));
     var items = M().changes.slice(0, 40);
     if (!items.length) { logEl.appendChild(h("p", { "class": "hint", text: "No changes yet." })); return; }
-    var committedFrom = WF.uncommitted(M());
-    logEl.appendChild(h("ul", {}, items.map(function (c, i) {
-      return h("li", { "class": i < committedFrom && S.level >= 3 ? "uncommitted" : "" }, [h("span", { "class": "date", text: c.date }), " ", c.what]);
+    logEl.appendChild(h("ul", {}, items.map(function (c) {
+      return h("li", {}, [h("span", { "class": "date", text: c.date }), " ", c.what]);
     })));
   }
 
@@ -839,88 +805,6 @@
     copyText(WF.serializeData(M())).then(function (ok) {
       toast(ok ? "Copied. Paste it into the chat and ask Claude to keep it." : "Could not copy. Select the change log and copy by hand.");
     });
-  }
-
-  /* ---------- Git ---------- */
-  function gh() { return WF.makeAdapter(S.mcp, WF.connectorConfig(M().connector)); }
-  async function refreshHead() {
-    if (S.level < 3) return;
-    try { S.head = await gh().head(M().repo); S.gitMsg = ""; }
-    catch (e) { S.gitMsg = "GitHub: " + ((e && e.message) || (e && e.code) || "no answer"); }
-    renderStatus();
-  }
-  async function doCommit() {
-    flushEdits();
-    renormalize();
-    var msg = commitInput.value.trim();
-    if (!msg) { toast("Write a commit message first."); commitInput.focus(); return; }
-    S.model = WF.commit(M(), msg);
-    commitInput.value = ""; commitInput.dataset.auto = "1";
-    S.dirty = true;
-    renderAll();
-    if (await save()) toast("Committed on the page. Push to send it to GitHub.");
-  }
-  async function doPush() {
-    flushEdits();
-    S.gitMsg = "pushing\u2026"; renderStatus();
-    var res = await WF.push(M(), gh(), pageHtml);
-    S.gitMsg = "";
-    if (!res.ok) { toast(res.message); await refreshHead(); return; }
-    S.model = res.model; S.head = res.model.git.pulled; S.dirty = true;
-    renderAll();
-    toast(res.message);
-    await save();
-  }
-  async function doPull() {
-    flushEdits();
-    S.gitMsg = "pulling\u2026"; renderStatus();
-    var res = await WF.pull(M(), gh());
-    S.gitMsg = "";
-    if (!res.ok) { toast(res.message); renderStatus(); return; }
-    if (res.choice) { S.choice = res.choice; renderChoice(); toast(res.message); return; }
-    S.model = res.model; S.head = res.model.git.pulled; S.dirty = true;
-    renderAll();
-    toast(res.message);
-    await save();
-  }
-  function renderChoice() {
-    gitPanel.innerHTML = "";
-    var c = S.choice;
-    gitPanel.hidden = !c;
-    if (!c) return;
-    function side(title, m, which) {
-      return h("div", { "class": "side" }, [h("h3", { text: title }),
-        h("ul", {}, m.changes.slice(0, 6).map(function (x) { return h("li", { text: x.date + "  " + x.what }); })),
-        h("button", { type: "button", "class": "btn", onclick: async function () {
-          S.model = WF.keepAfterChoice(c, which); S.choice = null; S.head = c.theirs.git.pulled; S.dirty = true;
-          renderAll(); renderChoice(); await save();
-        } }, [which === "mine" ? "Keep the page's" : "Keep the repository's"])]);
-    }
-    gitPanel.appendChild(h("p", { text: "The page and the repository have both changed since you last pulled. Keep one; the other is noted in the change log. After keeping the page's, push to replace the repository's copy." }));
-    gitPanel.appendChild(h("div", { "class": "sides" }, [side("On this page", c.mine, "mine"), side("In the repository", c.theirs, "theirs")]));
-    gitPanel.appendChild(h("button", { type: "button", "class": "btn small", onclick: function () { S.choice = null; renderChoice(); } }, ["Not now"]));
-  }
-
-  async function checkGithub() {
-    checkEl.hidden = false;
-    checkEl.innerHTML = "";
-    checkEl.appendChild(h("p", { text: "Checking GitHub\u2026 (this reads only; it changes nothing)" }));
-    var mcp = S.mcp;
-    if (!mcp && window.claude && typeof window.claude.use === "function") {
-      try { mcp = await withTimeout(window.claude.use("mcp"), 10000); } catch (e) { mcp = null; }
-    }
-    var res = await WF.checkGithub(mcp, M());
-    checkEl.innerHTML = "";
-    checkEl.className = "gh-check " + (res.ok ? "ok" : "bad");
-    checkEl.appendChild(h("div", { "class": "gh-head" }, [
-      h("strong", { text: res.ok ? "GitHub works from this page." : "GitHub is not ready on this page." }),
-      h("button", { type: "button", "class": "btn small", onclick: function () { checkEl.hidden = true; } }, ["Close"])]));
-    checkEl.appendChild(h("ul", {}, res.lines.map(function (l) {
-      return h("li", { "class": l.ok ? "yes" : "no" }, [h("span", { "class": "mark", text: l.ok ? "\u2713" : "\u2715" }),
-        h("span", { "class": "lbl", text: l.label }), h("span", { "class": "det", text: l.detail })]);
-    })));
-    if (!res.ok) checkEl.appendChild(h("p", { "class": "hint", text: "Without GitHub, Save still keeps your map on this page; commit and push workflow/ from the terminal." }));
-    if (res.ok && mcp && S.artifact && S.level < 3) { S.mcp = mcp; S.level = 3; renderAll(); await refreshHead(); }
   }
 
   /* ---------- everything ---------- */
@@ -953,11 +837,6 @@
     if (!c || typeof c.use !== "function") { renderAll(); return; }
     try { S.artifact = await withTimeout(c.use("artifact"), 10000); } catch (e) { S.artifact = null; }
     if (S.artifact) S.level = 2;
-    if (S.artifact && M().repo.owner && M().repo.name) {
-      try { S.mcp = await withTimeout(c.use("mcp"), 10000); } catch (e) { S.mcp = null; }
-      if (S.mcp) S.level = 3;
-    }
     renderAll();
-    await refreshHead();
   })();
 })(WF);

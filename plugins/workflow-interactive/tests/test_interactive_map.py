@@ -107,7 +107,7 @@ class ModelTest(unittest.TestCase):
         self.assertTrue(all(s["icon"] for s in m["steps"]))
         self.assertEqual(m["id"], "close-reading-of-archival-tv")
         self.assertEqual(m["repo"]["branch"], "main")
-        self.assertEqual(m["git"]["pending"], [])
+        self.assertNotIn("git", m)
 
     def test_string_numbers_and_malformed_fields(self):
         m = self.norm(old_map([step("1", "A"), step("2a", "B", unsure="one doubt", check="me",
@@ -229,15 +229,6 @@ class RebuildTest(unittest.TestCase):
         self.assertNotIn("<", r["raw"])
         self.assertEqual(r["back"], "<!--<script>x")
 
-    def test_connector_override_is_limited(self):
-        r = run_js("[WF.connectorConfig({server:'GitHub (work)', tools:{read:'get_file', write:'delete_repository'}}),"
-                   " WF.connectorConfig({server:'x\\u003c/y', tools:'nope'}), WF.connectorConfig(null)]")
-        self.assertEqual(r[0], {"server": "GitHub", "tools": {"read": "get_file", "write": "push_files",
-                                                              "head": "list_commits"}})
-        self.assertEqual(r[1], {"server": "GitHub", "tools": {"read": "get_file_contents", "write": "push_files",
-                                                              "head": "list_commits"}})
-        self.assertEqual(r[2]["server"], "GitHub")
-
     def test_rebuild_keeps_styles_and_scripts(self):
         parts = {"reset": "*{margin:0}", "title": "My <map>",
                  "styles": ["<style data-wf>.lane{fill:red}</style>"],
@@ -252,141 +243,6 @@ class RebuildTest(unittest.TestCase):
         self.assertIn('<script type="application/json" id="workflow">{"a":1}</script>'
                       '<div id="app"></div><script data-wf>var x = 1;</script>', html)
         self.assertTrue(html.endswith("</body></html>"))
-
-
-FAKE_GH = """
-function fakeGh(state){
-  return {
-    calls: [],
-    head: async function(){ return state.head; },
-    read: async function(repo, path){ return state.files[path] ? {text: state.files[path]} : null; },
-    write: async function(repo, files, message){
-      if (state.fail) throw {code: 'tool_error', message: state.fail};
-      this.calls.push({files: files.map(function(f){return f.path;}), message: message});
-      files.forEach(function(f){ state.files[f.path] = f.content; });
-      state.head = 'sha' + (this.calls.length + 1); return state.head; }
-  };
-}
-"""
-
-
-def gitmap(**kw):
-    m = old_map([step(1, "A")], [], repo={"owner": "o", "name": "r"},
-                changes=[{"date": "2026-11-18", "what": "added A"},
-                         {"date": "2026-11-17", "what": "begun"}])
-    m.update(kw)
-    return m
-
-
-@unittest.skipUnless(HAS_NODE, "node not installed")
-class GitTest(unittest.TestCase):
-    def test_paths_and_map_md(self):
-        r = run_js("(function(){var m=WF.normalize(" + J(gitmap()) + ");"
-                   " return [WF.paths(m), WF.mapMd(m)];})()")
-        self.assertEqual(r[0], {"md": "workflow/close-reading-of-archival-tv/map.md",
-                                "html": "workflow/close-reading-of-archival-tv/map.html",
-                                "runs": "workflow/close-reading-of-archival-tv/runs.jsonl"})
-        self.assertTrue(r[1].startswith("## Close reading of archival TV\n\n```json\n"))
-        self.assertTrue(r[1].rstrip().endswith("```"))
-
-    def test_commit_takes_uncommitted_lines(self):
-        r = run_js("(function(){var m=WF.normalize(" + J(gitmap()) + ");"
-                   " var a=WF.uncommitted(m); m=WF.commit(m,'first');"
-                   " return [a, WF.uncommitted(m), m.git.pending.length, m.git.pending[0].message,"
-                   " m.git.pending[0].changes];})()")
-        self.assertEqual(r, [2, 0, 1, "first", ["added A", "begun"]])
-
-    def test_push_writes_each_commit(self):
-        r = run_js("(async function(){var s={head:null, files:{}}; var gh=fakeGh(s);"
-                   " var m=WF.normalize(" + J(gitmap()) + "); m=WF.commit(m,'one');"
-                   " m.changes.unshift({date:'2026-11-18', what:'renamed A'}); m=WF.commit(m,'two');"
-                   " var res=await WF.push(m, gh, function(mm){return '<html>'+mm.git.pending.length+'</html>';});"
-                   " return {ok: res.ok, calls: gh.calls, pending: res.model.git.pending.length,"
-                   " pulled: res.model.git.pulled};})()", FAKE_GH)
-        self.assertTrue(r["ok"])
-        self.assertEqual([c["message"] for c in r["calls"]], ["one", "two"])
-        self.assertEqual(r["calls"][0]["files"], ["workflow/close-reading-of-archival-tv/map.md",
-                                                  "workflow/close-reading-of-archival-tv/map.html"])
-        self.assertEqual(r["pending"], 0)
-        self.assertEqual(r["pulled"], "sha3")
-
-    def test_push_refused_when_branch_moved(self):
-        r = run_js("(async function(){var s={head:'other', files:{}}; var gh=fakeGh(s);"
-                   " var m=WF.normalize(" + J(gitmap(git={"pulled": "sha1", "pending": []})) + ");"
-                   " m=WF.commit(m,'one'); var res=await WF.push(m, gh, function(){return 'x';});"
-                   " return {ok: res.ok, message: res.message, calls: gh.calls.length,"
-                   " pending: res.model.git.pending.length};})()", FAKE_GH)
-        self.assertEqual(r, {"ok": False, "message": "The repository has newer commits. Pull first.",
-                             "calls": 0, "pending": 1})
-
-    def test_first_push_refused_when_file_exists(self):
-        r = run_js("(async function(){var s={head:'h', files:{'workflow/close-reading-of-archival-tv/map.md':'x'}};"
-                   " var m=WF.normalize(" + J(gitmap()) + "); m=WF.commit(m,'one');"
-                   " var res=await WF.push(m, fakeGh(s), function(){return 'x';}); return res.ok;})()", FAKE_GH)
-        self.assertFalse(r)
-
-    def test_push_failure_keeps_pending(self):
-        r = run_js("(async function(){var s={head:null, files:{}, fail:'Resource not accessible'};"
-                   " var m=WF.normalize(" + J(gitmap()) + "); m=WF.commit(m,'one');"
-                   " var res=await WF.push(m, fakeGh(s), function(){return 'x';});"
-                   " return {ok: res.ok, message: res.message, pending: res.model.git.pending.length};})()",
-                   FAKE_GH)
-        self.assertEqual(r, {"ok": False, "message": "Resource not accessible", "pending": 1})
-
-    def test_pull_takes_theirs_when_clean(self):
-        theirs = gitmap(title="Close reading of archival TV", question="Theirs")
-        r = run_js("(async function(){var t=WF.normalize(" + J(theirs) + ");"
-                   " var s={head:'h9', files:{}}; s.files[WF.paths(t).md]=WF.mapMd(t);"
-                   " var m=WF.normalize(" + J(gitmap()) + "); m=WF.commit(m,'c'); m.git.pending=[];"
-                   " var res=await WF.pull(m, fakeGh(s));"
-                   " return {ok: res.ok, q: res.model.question, pulled: res.model.git.pulled};})()",
-                   FAKE_GH)
-        self.assertEqual(r, {"ok": True, "q": "Theirs", "pulled": "h9"})
-
-    def test_pull_offers_choice_when_diverged(self):
-        theirs = gitmap(question="Theirs")
-        r = run_js("(async function(){var t=WF.normalize(" + J(theirs) + ");"
-                   " var s={head:'h9', files:{}}; s.files[WF.paths(t).md]=WF.mapMd(t);"
-                   " var m=WF.normalize(" + J(gitmap(git={"pulled": "h1", "pending": []})) + ");"
-                   " m=WF.commit(m,'mine'); var res=await WF.pull(m, fakeGh(s));"
-                   " return {ok: res.ok, choice: !!res.choice, theirs: res.choice && res.choice.theirs.question};})()",
-                   FAKE_GH)
-        self.assertEqual(r, {"ok": True, "choice": True, "theirs": "Theirs"})
-
-    def test_status(self):
-        r = run_js("(function(){var m=WF.normalize(" + J(gitmap(git={"pulled": "a", "pending": []})) + ");"
-                   " var out=[WF.status(m,'a')]; m=WF.commit(m,'x'); out.push(WF.status(m,'a'));"
-                   " out.push(WF.status(m,'b')); m.git.pending=[]; out.push(WF.status(m,'b'));"
-                   " m.changes.unshift({date:'d', what:'w'}); out.push(WF.status(m,'a')); return out;})()")
-        self.assertEqual(r, ["changes", "ahead", "diverged", "behind", "changes"])
-
-    def test_adapter_single_file_tool(self):
-        fake = """
-        var seen = [];
-        var fakeMcp = { callTool: async function(server, tool, input){
-          seen.push([tool, input.path, input.sha || null, input.files ? 'files' : 'one']);
-          if (tool === 'get_file_contents') { if (input.path === 'a.md') return {payload: {sha: 'blob-a', content: '', encoding: 'base64'}};
-            throw {code: 'tool_error', message: '404 Not Found'}; }
-          if (tool === 'create_or_update_file') return {payload: {commit: {sha: 'c-' + input.path}}};
-        }};"""
-        r = run_js("(async function(){var gh=WF.makeAdapter(fakeMcp, WF.connectorConfig({tools:{write:'create_or_update_file'}}));"
-                   " var sha=await gh.write({owner:'o',name:'r',branch:'main'},[{path:'a.md',content:'x'},{path:'b.html',content:'y'}],'m');"
-                   " return [sha, seen];})()", fake)
-        self.assertEqual(r[0], "c-b.html")
-        self.assertEqual(r[1], [["get_file_contents", "a.md", None, "one"], ["create_or_update_file", "a.md", "blob-a", "one"],
-                                ["get_file_contents", "b.html", None, "one"], ["create_or_update_file", "b.html", None, "one"]])
-
-    def test_adapter_reads_payloads(self):
-        fake_mcp = """
-        var fakeMcp = { callTool: async function(server, tool, input){
-          if (tool === 'list_commits') return {payload: [{sha: 'abc'}]};
-          if (tool === 'get_file_contents') return {payload: {content: Buffer.from('hello').toString('base64'), encoding: 'base64', sha: 's'}};
-          if (tool === 'push_files') return {payload: {object: {sha: 'new'}}};
-        }};"""
-        r = run_js("(async function(){var gh=WF.makeAdapter(fakeMcp, WF.GITHUB); var repo={owner:'o',name:'r',branch:'main'};"
-                   " return [await gh.head(repo), (await gh.read(repo,'p')).text,"
-                   " await gh.write(repo,[{path:'p',content:'c'}],'m')];})()", fake_mcp)
-        self.assertEqual(r, ["abc", "hello", "new"])
 
 
 def build_module():
@@ -502,10 +358,10 @@ class SkillTest(unittest.TestCase):
 
     def test_skill_states_the_rules(self):
         for needle in ("UNSURE", "no step", "you_or_it", "credited", "mine", "change log", "workflow/<id>/",
-                       "Copy the map", "Pull", "Commit", "Push", "Save", "simple-icons", "16.36.0", "icons",
+                       "Copy the map", "git commit", "git push", "pull request", "Save", "simple-icons", "16.36.0", "icons",
                        "runs.jsonl", "map.html", "capabilities", "list the workflows", "kind", "data-wf",
-                       "cms-workflow", "get_file_contents", "push_files", "list_commits", "View", "Edit",
-                       "What it did", "`runs`", "`round`", "pass", "New round", "Check GitHub"):
+                       "cms-workflow", "View", "Edit",
+                       "What it did", "`runs`", "`round`", "pass", "New round"):
             self.assertIn(needle, self.text())
 
     def test_existing_maps_are_read_first(self):
@@ -521,10 +377,12 @@ class SkillTest(unittest.TestCase):
                 continue
             self.assertTrue(name in icons["brand"] or name in icons["generic"], name)
 
-    def test_connect_github_note(self):
-        t = (REF / "connect-github.md").read_text()
-        for needle in ("Settings", "Connectors", "GitHub", "fleet repository", "Pull", "Commit", "Push", "Save"):
-            self.assertIn(needle, t)
+    def test_no_github_connector(self):
+        self.assertFalse((REF / "connect-github.md").exists())
+        self.assertNotIn("mcp", self.text())
+        page = TEMPLATE.read_text()
+        for gone in ('use("mcp")', "Check GitHub", "btn-push", "btn-pull", "makeAdapter"):
+            self.assertNotIn(gone, page)
 
 
 LOOP = old_map([step(1, "Gather"), step(2, "Tag"), step(3, "Read"), step(4, "Compare"), step(5, "Write")],
@@ -591,85 +449,6 @@ class RunsTest(unittest.TestCase):
                          ("2", "tried", 1, 1))
         self.assertEqual(m["round"], 1)
 
-    def test_push_writes_runs_jsonl(self):
-        r = run_js("(async function(){var s={head:null, files:{}}; var gh=fakeGh(s);" +
-                   " var m=" + record_all(["1"], "m.repo={owner:'o',name:'r',branch:'main'}; return m;") + ";"
-                   " m=WF.commit(m,'one'); var res=await WF.push(m, gh, function(){return 'x';});"
-                   " return gh.calls[0].files;})()", FAKE_GH)
-        self.assertEqual(r, ["workflow/close-reading-of-archival-tv/map.md",
-                             "workflow/close-reading-of-archival-tv/map.html",
-                             "workflow/close-reading-of-archival-tv/runs.jsonl"])
-
-
-CHECK_MCP = """
-function checkMcp(opts){
-  return {
-    calls: [],
-    listTools: async function(server){
-      if (opts.listFail) throw {code: 'server_not_connected', message: 'not connected'};
-      if (opts.noServer) return {servers: []};
-      return {servers: [{server: 'GitHub', authStatus: opts.auth || 'connected',
-        tools: (opts.tools || ['get_file_contents','push_files','list_commits']).map(function(n){return {name:n, description:''};})}]};
-    },
-    callTool: async function(server, tool, input){
-      this.calls.push(tool);
-      if (tool === 'list_commits') { if (opts.headFail) throw {code:'tool_error', message: opts.headFail}; return {payload:[{sha:'abc123'}]}; }
-      if (tool === 'get_file_contents') { if (opts.noFile) throw {code:'tool_error', message:'404 Not Found'}; return {payload:{content:'eA==', encoding:'base64'}}; }
-      throw new Error('write tool called by the check');
-    }
-  };
-}
-"""
-
-
-def check(opts, repo=True, mcp=True):
-    m = {"title": "T", "repo": {"owner": "o", "name": "r"} if repo else {}}
-    return run_js("(async function(){var mcp=" + ("checkMcp(" + J(opts) + ")" if mcp else "null") + ";"
-                  " var r=await WF.checkGithub(mcp, WF.normalize(" + J(m) + ")); r.calls = mcp ? mcp.calls : [];"
-                  " return r;})()", CHECK_MCP)
-
-
-@unittest.skipUnless(HAS_NODE, "node not installed")
-class CheckGithubTest(unittest.TestCase):
-    def test_all_good_and_never_writes(self):
-        r = check({})
-        self.assertTrue(r["ok"])
-        self.assertEqual([x["ok"] for x in r["lines"]], [True, True, True, True, True])
-        self.assertNotIn("push_files", r["calls"])
-        self.assertIn("abc123", " ".join(x["detail"] for x in r["lines"]))
-
-    def test_no_connector_on_the_page(self):
-        r = check({}, mcp=False)
-        self.assertFalse(r["ok"])
-        self.assertIn("not connected to this page", r["lines"][0]["detail"])
-
-    def test_no_repository(self):
-        r = check({}, repo=False)
-        self.assertFalse(r["ok"])
-        self.assertIn("No repository", " ".join(x["detail"] for x in r["lines"]))
-
-    def test_missing_tools_are_named(self):
-        r = check({"tools": ["get_file_contents", "create_or_update_file"]})
-        self.assertFalse(r["ok"])
-        text = " ".join(x["detail"] for x in r["lines"])
-        self.assertIn("list_commits", text)
-        self.assertIn("create_or_update_file", text)
-
-    def test_server_missing_or_needs_reauth(self):
-        self.assertFalse(check({"noServer": True})["ok"])
-        r = check({"auth": "needs_reauth"})
-        self.assertFalse(r["ok"])
-        self.assertIn("sign in", " ".join(x["detail"] for x in r["lines"]).lower())
-
-    def test_head_failure_reported(self):
-        r = check({"headFail": "Resource not accessible by integration"})
-        self.assertFalse(r["ok"])
-        self.assertIn("Resource not accessible", " ".join(x["detail"] for x in r["lines"]))
-
-    def test_missing_map_is_fine(self):
-        r = check({"noFile": True})
-        self.assertTrue(r["ok"])
-        self.assertIn("not in the repository yet", " ".join(x["detail"] for x in r["lines"]))
 
 
 if __name__ == "__main__":
