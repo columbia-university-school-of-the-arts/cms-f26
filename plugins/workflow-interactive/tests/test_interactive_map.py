@@ -360,6 +360,22 @@ class GitTest(unittest.TestCase):
                    " m.changes.unshift({date:'d', what:'w'}); out.push(WF.status(m,'a')); return out;})()")
         self.assertEqual(r, ["changes", "ahead", "diverged", "behind", "changes"])
 
+    def test_adapter_single_file_tool(self):
+        fake = """
+        var seen = [];
+        var fakeMcp = { callTool: async function(server, tool, input){
+          seen.push([tool, input.path, input.sha || null, input.files ? 'files' : 'one']);
+          if (tool === 'get_file_contents') { if (input.path === 'a.md') return {payload: {sha: 'blob-a', content: '', encoding: 'base64'}};
+            throw {code: 'tool_error', message: '404 Not Found'}; }
+          if (tool === 'create_or_update_file') return {payload: {commit: {sha: 'c-' + input.path}}};
+        }};"""
+        r = run_js("(async function(){var gh=WF.makeAdapter(fakeMcp, WF.connectorConfig({tools:{write:'create_or_update_file'}}));"
+                   " var sha=await gh.write({owner:'o',name:'r',branch:'main'},[{path:'a.md',content:'x'},{path:'b.html',content:'y'}],'m');"
+                   " return [sha, seen];})()", fake)
+        self.assertEqual(r[0], "c-b.html")
+        self.assertEqual(r[1], [["get_file_contents", "a.md", None, "one"], ["create_or_update_file", "a.md", "blob-a", "one"],
+                                ["get_file_contents", "b.html", None, "one"], ["create_or_update_file", "b.html", None, "one"]])
+
     def test_adapter_reads_payloads(self):
         fake_mcp = """
         var fakeMcp = { callTool: async function(server, tool, input){
@@ -489,7 +505,7 @@ class SkillTest(unittest.TestCase):
                        "Copy the map", "Pull", "Commit", "Push", "Save", "simple-icons", "16.36.0", "icons",
                        "runs.jsonl", "map.html", "capabilities", "list the workflows", "kind", "data-wf",
                        "cms-workflow", "get_file_contents", "push_files", "list_commits", "View", "Edit",
-                       "What it did", "`runs`", "`round`", "pass", "New round"):
+                       "What it did", "`runs`", "`round`", "pass", "New round", "Check GitHub"):
             self.assertIn(needle, self.text())
 
     def test_existing_maps_are_read_first(self):
@@ -583,6 +599,77 @@ class RunsTest(unittest.TestCase):
         self.assertEqual(r, ["workflow/close-reading-of-archival-tv/map.md",
                              "workflow/close-reading-of-archival-tv/map.html",
                              "workflow/close-reading-of-archival-tv/runs.jsonl"])
+
+
+CHECK_MCP = """
+function checkMcp(opts){
+  return {
+    calls: [],
+    listTools: async function(server){
+      if (opts.listFail) throw {code: 'server_not_connected', message: 'not connected'};
+      if (opts.noServer) return {servers: []};
+      return {servers: [{server: 'GitHub', authStatus: opts.auth || 'connected',
+        tools: (opts.tools || ['get_file_contents','push_files','list_commits']).map(function(n){return {name:n, description:''};})}]};
+    },
+    callTool: async function(server, tool, input){
+      this.calls.push(tool);
+      if (tool === 'list_commits') { if (opts.headFail) throw {code:'tool_error', message: opts.headFail}; return {payload:[{sha:'abc123'}]}; }
+      if (tool === 'get_file_contents') { if (opts.noFile) throw {code:'tool_error', message:'404 Not Found'}; return {payload:{content:'eA==', encoding:'base64'}}; }
+      throw new Error('write tool called by the check');
+    }
+  };
+}
+"""
+
+
+def check(opts, repo=True, mcp=True):
+    m = {"title": "T", "repo": {"owner": "o", "name": "r"} if repo else {}}
+    return run_js("(async function(){var mcp=" + ("checkMcp(" + J(opts) + ")" if mcp else "null") + ";"
+                  " var r=await WF.checkGithub(mcp, WF.normalize(" + J(m) + ")); r.calls = mcp ? mcp.calls : [];"
+                  " return r;})()", CHECK_MCP)
+
+
+@unittest.skipUnless(HAS_NODE, "node not installed")
+class CheckGithubTest(unittest.TestCase):
+    def test_all_good_and_never_writes(self):
+        r = check({})
+        self.assertTrue(r["ok"])
+        self.assertEqual([x["ok"] for x in r["lines"]], [True, True, True, True, True])
+        self.assertNotIn("push_files", r["calls"])
+        self.assertIn("abc123", " ".join(x["detail"] for x in r["lines"]))
+
+    def test_no_connector_on_the_page(self):
+        r = check({}, mcp=False)
+        self.assertFalse(r["ok"])
+        self.assertIn("not connected to this page", r["lines"][0]["detail"])
+
+    def test_no_repository(self):
+        r = check({}, repo=False)
+        self.assertFalse(r["ok"])
+        self.assertIn("No repository", " ".join(x["detail"] for x in r["lines"]))
+
+    def test_missing_tools_are_named(self):
+        r = check({"tools": ["get_file_contents", "create_or_update_file"]})
+        self.assertFalse(r["ok"])
+        text = " ".join(x["detail"] for x in r["lines"])
+        self.assertIn("list_commits", text)
+        self.assertIn("create_or_update_file", text)
+
+    def test_server_missing_or_needs_reauth(self):
+        self.assertFalse(check({"noServer": True})["ok"])
+        r = check({"auth": "needs_reauth"})
+        self.assertFalse(r["ok"])
+        self.assertIn("sign in", " ".join(x["detail"] for x in r["lines"]).lower())
+
+    def test_head_failure_reported(self):
+        r = check({"headFail": "Resource not accessible by integration"})
+        self.assertFalse(r["ok"])
+        self.assertIn("Resource not accessible", " ".join(x["detail"] for x in r["lines"]))
+
+    def test_missing_map_is_fine(self):
+        r = check({"noFile": True})
+        self.assertTrue(r["ok"])
+        self.assertIn("not in the repository yet", " ".join(x["detail"] for x in r["lines"]))
 
 
 if __name__ == "__main__":

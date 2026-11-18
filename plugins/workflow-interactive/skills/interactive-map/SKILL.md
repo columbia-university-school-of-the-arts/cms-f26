@@ -180,6 +180,14 @@ capabilities when your artifact tool accepts them:
   record them in the data as
   `"connector": {"server": "...", "tools": {"read": "...", "write": "...", "head": "..."}}`.
 
+After publishing with GitHub, ask the student to press **Check GitHub** on
+the page. It reads only: it says whether the page can call the connector,
+whether the repository is set, whether the connector is signed in, which of
+the three tools it found (and what it offers instead), and whether it can read
+the branch's latest commit. When it reports missing tools, set `connector` to
+the names it lists (`create_or_update_file` works as the write tool too) and
+republish.
+
 If the publish refuses the capabilities, publish without them and tell the
 student in one line that this page cannot save itself yet; they keep changes
 by pressing **Copy the map** and pasting into the chat. Never fall back to

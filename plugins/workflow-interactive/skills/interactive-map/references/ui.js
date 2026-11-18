@@ -114,9 +114,10 @@
   var traceEl = h("section", { "class": "trace" });
   var panel = h("aside", { "class": "panel", hidden: true, "aria-label": "Details" });
   var gitPanel = h("div", { "class": "git-choice", hidden: true });
+  var checkEl = h("div", { "class": "gh-check", hidden: true, role: "status" });
   var logEl = h("section", { "class": "log" });
   var main = h("div", { "class": "main" }, [h("div", { "class": "work" }, [wrapEl, traceEl]), panel]);
-  [header, toolbar, banner, gitPanel, problems, main, logEl, h("div", { "class": "toast", role: "status" })].forEach(function (e) { app.appendChild(e); });
+  [header, toolbar, banner, checkEl, gitPanel, problems, main, logEl, h("div", { "class": "toast", role: "status" })].forEach(function (e) { app.appendChild(e); });
   function canvasWrap() { return wrapEl; }
 
   /* ---------- header and toolbar ---------- */
@@ -163,7 +164,8 @@
     ]));
     toolbar.appendChild(h("div", { "class": "group" }, [
       button("save", "Save", save, "Save this page (Cmd or Ctrl + S)"), statusEl,
-      button("copy", "Copy the map", copyMap, "Copy the map's data to paste into the chat")
+      button("copy", "Copy the map", copyMap, "Copy the map's data to paste into the chat"),
+      button("check", "Check GitHub", checkGithub, "See whether this page can reach your fleet repository. Reads only.")
     ]));
     var g = h("div", { "class": "group gitgroup" }, [
       h("span", { "class": "git-label", text: "GitHub" }), gitStatusEl, button("pull", "Pull", doPull),
@@ -897,6 +899,28 @@
     gitPanel.appendChild(h("p", { text: "The page and the repository have both changed since you last pulled. Keep one; the other is noted in the change log. After keeping the page's, push to replace the repository's copy." }));
     gitPanel.appendChild(h("div", { "class": "sides" }, [side("On this page", c.mine, "mine"), side("In the repository", c.theirs, "theirs")]));
     gitPanel.appendChild(h("button", { type: "button", "class": "btn small", onclick: function () { S.choice = null; renderChoice(); } }, ["Not now"]));
+  }
+
+  async function checkGithub() {
+    checkEl.hidden = false;
+    checkEl.innerHTML = "";
+    checkEl.appendChild(h("p", { text: "Checking GitHub\u2026 (this reads only; it changes nothing)" }));
+    var mcp = S.mcp;
+    if (!mcp && window.claude && typeof window.claude.use === "function") {
+      try { mcp = await withTimeout(window.claude.use("mcp"), 10000); } catch (e) { mcp = null; }
+    }
+    var res = await WF.checkGithub(mcp, M());
+    checkEl.innerHTML = "";
+    checkEl.className = "gh-check " + (res.ok ? "ok" : "bad");
+    checkEl.appendChild(h("div", { "class": "gh-head" }, [
+      h("strong", { text: res.ok ? "GitHub works from this page." : "GitHub is not ready on this page." }),
+      h("button", { type: "button", "class": "btn small", onclick: function () { checkEl.hidden = true; } }, ["Close"])]));
+    checkEl.appendChild(h("ul", {}, res.lines.map(function (l) {
+      return h("li", { "class": l.ok ? "yes" : "no" }, [h("span", { "class": "mark", text: l.ok ? "\u2713" : "\u2715" }),
+        h("span", { "class": "lbl", text: l.label }), h("span", { "class": "det", text: l.detail })]);
+    })));
+    if (!res.ok) checkEl.appendChild(h("p", { "class": "hint", text: "Without GitHub, Save still keeps your map on this page; commit and push workflow/ from the terminal." }));
+    if (res.ok && mcp && S.artifact && S.level < 3) { S.mcp = mcp; S.level = 3; renderAll(); await refreshHead(); }
   }
 
   /* ---------- everything ---------- */

@@ -554,10 +554,66 @@ var WF = (function () {
         } catch (e) { if (notFound(e)) return null; throw e; }
       },
       write: async function (repo, files, message) {
+        if (c.tools.write === "create_or_update_file") {
+          /* One file per call, and an existing file needs its blob sha. */
+          var last = "";
+          for (var i = 0; i < files.length; i++) {
+            var f = files[i], sha = "";
+            try {
+              var got = await mcp.callTool(c.server, c.tools.read, { owner: repo.owner, repo: repo.name, path: f.path, ref: repo.branch });
+              sha = (got && isObj(got.payload) && typeof got.payload.sha === "string") ? got.payload.sha : "";
+            } catch (e) { if (!notFound(e)) throw e; }
+            var input = { owner: repo.owner, repo: repo.name, branch: repo.branch, path: f.path, content: f.content, message: message };
+            if (sha) input.sha = sha;
+            var w = await mcp.callTool(c.server, c.tools.write, input);
+            last = findSha(w && w.payload && w.payload.commit ? w.payload.commit : w && w.payload, 0) || last;
+          }
+          return last;
+        }
         var r = await mcp.callTool(c.server, c.tools.write, { owner: repo.owner, repo: repo.name, branch: repo.branch, files: files, message: message });
         return findSha(r && r.payload, 0);
       }
     };
+  }
+
+  /* ---------- Check GitHub: read-only, never writes ---------- */
+
+  async function checkGithub(mcp, model) {
+    var lines = [], cfg = connectorConfig(model.connector);
+    function line(label, ok, detail) { lines.push({ label: label, ok: ok, detail: detail }); return ok; }
+    function done() { return { ok: lines.every(function (l) { return l.ok; }), lines: lines }; }
+    if (!line("Connector on this page", !!mcp, mcp ? "This page can call your connectors."
+      : "GitHub is not connected to this page. Turn GitHub on in the chat's tools menu, then ask Claude to republish the map with GitHub.")) return done();
+    var r = model.repo;
+    if (!line("Repository", !!(r.owner && r.name), r.owner && r.name ? r.owner + "/" + r.name + ", branch " + r.branch
+      : "No repository is set on this map. Ask Claude to add your fleet repository.")) return done();
+    var listed;
+    try { listed = await mcp.listTools(cfg.server); }
+    catch (e) { line("GitHub connector", false, "Could not list the connector: " + errMessage(e)); return done(); }
+    var srv = ((listed && listed.servers) || []).filter(function (x) { return x.server === cfg.server; })[0];
+    if (!srv) {
+      line("GitHub connector", false, "No connector named \u201c" + cfg.server + "\u201d is connected. In Claude, open Settings, then Connectors, and connect GitHub.");
+      return done();
+    }
+    if (srv.authStatus === "needs_reauth") {
+      line("GitHub connector", false, "GitHub needs you to sign in again: Settings, then Connectors, then GitHub.");
+      return done();
+    }
+    line("GitHub connector", true, "\u201c" + cfg.server + "\u201d is connected" + (srv.authStatus === "unknown" ? "; Claude may ask you to allow it" : "") + ".");
+    var names = (srv.tools || []).map(function (t) { return t.name; });
+    var missing = ["read", "write", "head"].map(function (j) { return cfg.tools[j]; }).filter(function (n) { return names.indexOf(n) < 0; });
+    line("Tools", !missing.length, missing.length
+      ? "Missing: " + missing.join(", ") + ". The connector offers: " + (names.join(", ") || "nothing") +
+        ". Ask Claude to set the connector's tool names on this map and republish."
+      : "Reading, writing, and the latest commit: " + cfg.tools.read + ", " + cfg.tools.write + ", " + cfg.tools.head + ".");
+    var gh = makeAdapter(mcp, cfg), head, file;
+    try {
+      head = await gh.head(r);
+      file = await gh.read(r, paths(model).md);
+    } catch (e) { line("Reading the repository", false, errMessage(e)); return done(); }
+    line("Reading the repository", true, (head ? "Latest commit " + String(head).slice(0, 7) + " on " + r.branch : "The branch has no commits yet") +
+      (file ? "; the map is in " + paths(model).md + "." : "; the map is not in the repository yet. Push puts it there."));
+    return done();
   }
 
   var api = {
@@ -565,7 +621,7 @@ var WF = (function () {
     laneForWho: laneForWho, whoForLane: whoForLane, guessIcon: guessIcon, slug: slug, esc: esc, clone: clone,
     order: order, walk: walk, trace: trace, rebuild: rebuild, paths: paths, mapMd: mapMd, mapFromMd: mapFromMd,
     uncommitted: uncommitted, commit: commit, recordRun: recordRun, newRound: newRound, runsFor: runsFor,
-    rounds: rounds, runEvents: runEvents, runTrace: runTrace, runsJsonl: runsJsonl, status: status, push: push, pull: pull,
+    rounds: rounds, runEvents: runEvents, checkGithub: checkGithub, runTrace: runTrace, runsJsonl: runsJsonl, status: status, push: push, pull: pull,
     keepAfterChoice: keepAfterChoice, makeAdapter: makeAdapter, today: today, stripInternal: stripInternal
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
